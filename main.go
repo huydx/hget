@@ -23,10 +23,7 @@ func main() {
 	}
 
 	//set up parallel
-	i := runtime.GOMAXPROCS(*conn)
-	fmt.Printf("using %d parallel \n", i)
-
-	downloader := NewHttpDownloader(*url, i)
+	downloader := NewHttpDownloader(*url, *conn)
 	files, err := downloader.Do()
 	if err != nil {
 		panic(err)
@@ -36,7 +33,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(files)
 }
 
 func usage() {

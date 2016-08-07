@@ -4,11 +4,15 @@ import (
 	"os"
 	"io"
 	"sort"
+	"github.com/cheggaaa/pb"
+	"fmt"
 )
 
 func JoinFile(files []string, out string) error {
 	//sort with file name or we will join files with wrong order
 	sort.Strings(files)
+	fmt.Println("Start joining")
+	bar := pb.StartNew(len(files))
 
 	outf, err := os.OpenFile(out, os.O_CREATE | os.O_WRONLY, 0600)
 	defer outf.Close()
@@ -20,7 +24,10 @@ func JoinFile(files []string, out string) error {
 		if err = copy(f, outf); err != nil {
 			return err
 		}
+		os.Remove(f)
+		bar.Increment()
 	}
+	bar.FinishPrint("Finish joining")
 
 	return nil
 }

@@ -8,7 +8,8 @@ import (
 	"strconv"
 	"sync"
 	"path/filepath"
-	"io/ioutil"
+	pb "gopkg.in/cheggaaa/pb.v1"
+	"io"
 )
 
 var (
@@ -22,6 +23,7 @@ var (
 
 type HttpDownloader struct {
 	url string
+	file string
 	par int64
 	len int64
 }
@@ -48,7 +50,9 @@ func NewHttpDownloader(url string, par int) *HttpDownloader {
 		os.Exit(1)
 	}
 
-	return &HttpDownloader{url, int64(par), len}
+	file := filepath.Base(url)
+
+	return &HttpDownloader{url, file, int64(par), len}
 }
 
 //get url
@@ -59,12 +63,31 @@ func (d *HttpDownloader) Do() ([]string, error) {
 	var lock sync.RWMutex
 	var ret = make([]string, 0)
 
+	bars := make([]*pb.ProgressBar, 0)
+	for j := int64(0); j < d.par; j++ {
+		from := (d.len/d.par)*j
+		var to int64
+		if j < d.par-1 {
+			to = (d.len/d.par)*(j+1) - 1
+		} else {
+			to = d.len
+		}
+		len := to - from
+		bars = append(bars, pb.New64(len).Prefix(fmt.Sprintf("%s-%d", d.file, j)))
+	}
+
+	barpool, err := pb.StartPool(bars...)
+	if err != nil {
+		panic(err)
+	}
+
 	var i int64
 	for i = 0; i < d.par; i++ {
 		ws.Add(1)
 		go func(d *HttpDownloader, loop int64) {
 			defer ws.Done()
-			fmt.Printf("download part %d start\n", loop)
+			var bar = bars[loop]
+
 			//range calculate
 			var from int64
 			var to int64
@@ -80,7 +103,7 @@ func (d *HttpDownloader) Do() ([]string, error) {
 			} else {
 				ranges = fmt.Sprintf("bytes=%d-", from)
 			}
-			fmt.Printf("getting ranges %s\n", ranges)
+
 
 			//send request
 			req, err := http.NewRequest("GET", *url, nil)
@@ -113,22 +136,19 @@ func (d *HttpDownloader) Do() ([]string, error) {
 				return
 			}
 
-			bytes, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				reterr = err
-				return
-			}
-			f.Write(bytes)
+			writer := io.MultiWriter(f, bar)
+			io.Copy(writer, resp.Body)
 
+			bar.Finish()
 
 			lock.Lock()
 			ret = append(ret, fname)
 			lock.Unlock()
-			fmt.Printf("download part %d end\n", loop)
-
 		}(d, i)
 	}
 
 	ws.Wait()
+	barpool.Stop()
+
 	return ret, reterr
 }
