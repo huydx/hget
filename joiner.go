@@ -3,9 +3,13 @@ package main
 import (
 	"os"
 	"io"
+	"sort"
 )
 
 func JoinFile(files []string, out string) error {
+	//sort with file name or we will join files with wrong order
+	sort.Strings(files)
+
 	outf, err := os.OpenFile(out, os.O_CREATE | os.O_WRONLY, 0600)
 	defer outf.Close()
 	if err != nil {
