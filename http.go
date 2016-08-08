@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -10,10 +9,19 @@ import (
 	"path/filepath"
 	pb "gopkg.in/cheggaaa/pb.v1"
 	"io"
+	"github.com/fatih/color"
+	"net"
+	stdurl "net/url"
+	"errors"
+	"strings"
+	"crypto/tls"
 )
 
 var (
-	client http.Client
+	tr = &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client = &http.Client{Transport: tr}
 )
 
 var (
@@ -26,33 +34,51 @@ type HttpDownloader struct {
 	file string
 	par int64
 	len int64
+	ips []string
+	skipTls bool
 }
 
-func NewHttpDownloader(url string, par int) *HttpDownloader {
-	req, _ := http.NewRequest("GET", url, nil)
-	resp, _ := client.Do(req)
+func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
+	parsed, err := stdurl.Parse(url)
+	FatalCheck(err)
+
+	ips, err := net.LookupIP(parsed.Host)
+	FatalCheck(err)
+
+	ipstr := FilterIPV4(ips)
+	Printf("Resolve ip: %s\n", strings.Join(ipstr, " | "))
+
+	req, err := http.NewRequest("GET", url, nil)
+	FatalCheck(err)
+
+	resp, err := client.Do(req)
+	FatalCheck(err)
 
 	if resp.Header.Get(acceptRangeHeader) == "" {
-		log.Fatalf("target url not support range download")
-		os.Exit(1)
+		FatalCheck(errors.New("Target url is not supported"))
 	}
 
 	//get download range
 	clen := resp.Header.Get(contentLengthHeader)
 	if clen == "" {
-		log.Fatalf("target url not contain Content-Length header")
-		os.Exit(1)
+		FatalCheck(errors.New("Target url not contain Content-Length header"))
 	}
 
 	len, err := strconv.ParseInt(clen, 10, 64)
-	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+	FatalCheck(err)
+
+	sizeInMb := float64(len) / (1000 * 1000)
+
+
+	if sizeInMb < 1000 {
+		Printf("Download target size: %.1f MB\n", sizeInMb)
+	} else {
+		Printf("Download target size: %.1f GB\n", sizeInMb / 1000)
 	}
 
 	file := filepath.Base(url)
 
-	return &HttpDownloader{url, file, int64(par), len}
+	return &HttpDownloader{url, file, int64(par), len, ipstr, skipTls}
 }
 
 //get url
@@ -73,13 +99,11 @@ func (d *HttpDownloader) Do() ([]string, error) {
 			to = d.len
 		}
 		len := to - from
-		bars = append(bars, pb.New64(len).Prefix(fmt.Sprintf("%s-%d", d.file, j)))
+		bars = append(bars, pb.New64(len).Prefix(color.YellowString(fmt.Sprintf("%s-%d", d.file, j))))
 	}
 
 	barpool, err := pb.StartPool(bars...)
-	if err != nil {
-		panic(err)
-	}
+	FatalCheck(err)
 
 	var i int64
 	for i = 0; i < d.par; i++ {
@@ -106,7 +130,7 @@ func (d *HttpDownloader) Do() ([]string, error) {
 
 
 			//send request
-			req, err := http.NewRequest("GET", *url, nil)
+			req, err := http.NewRequest("GET", d.url, nil)
 			if err != nil {
 				reterr = err
 				return
