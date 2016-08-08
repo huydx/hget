@@ -37,5 +37,5 @@ func main() {
 }
 
 func usage() {
-	Printf("%s: hget [URL] [-n connection]", color.CyanString("Usage"))
+	Printf("%s: hget [URL] [-n connection] [-skip-tls true]", color.CyanString("Usage"))
 }
