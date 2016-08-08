@@ -3,7 +3,7 @@
 
 Rocket fast download accelerator written in golang
 
-Install
+## Install
 
 ```
 $ go get -d github.com/huydx/hget
@@ -13,7 +13,7 @@ $ make clean install
 
 Binary file will be built at ./bin/hget, you can copy to /usr/bin or /usr/local/bin and even `alias wget hget` to replace wget totally :P
 
-Usage
+## Usage
 
 ```
 hget url -n parallel -skip-tls false
