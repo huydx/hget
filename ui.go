@@ -1,13 +1,13 @@
 package main
 
 import (
-	"os"
-	"io"
 	"fmt"
+	"io"
+	"os"
 
+	"github.com/fatih/color"
 	"github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"
-	"github.com/fatih/color"
 )
 
 var (
@@ -23,13 +23,16 @@ type UI interface {
 	Errorln(a ...interface{}) (n int, err error)
 }
 
-
 func Printf(format string, a ...interface{}) (n int, err error) {
-	return Default.Printf(color.CyanString("INFO: ") + format, a...)
+	return Default.Printf(color.CyanString("INFO: ")+format, a...)
 }
 
 func Errorf(format string, a ...interface{}) (n int, err error) {
-	return Default.Errorf(color.RedString("ERROR: ") + format, a...)
+	return Default.Errorf(color.RedString("ERROR: ")+format, a...)
+}
+
+func Warnf(format string, a ...interface{}) (n int, err error) {
+	return Default.Errorf(color.YellowString("WARN: ")+format, a...)
 }
 
 func Errorln(a ...interface{}) (n int, err error) {

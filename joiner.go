@@ -1,11 +1,11 @@
 package main
 
 import (
-	"os"
-	"io"
-	"sort"
 	"github.com/cheggaaa/pb"
 	"github.com/fatih/color"
+	"io"
+	"os"
+	"sort"
 )
 
 func JoinFile(files []string, out string) error {
@@ -14,7 +14,7 @@ func JoinFile(files []string, out string) error {
 	Printf("Start joining \n")
 	bar := pb.StartNew(len(files)).Prefix(color.CyanString("Joining"))
 
-	outf, err := os.OpenFile(out, os.O_CREATE | os.O_WRONLY, 0600)
+	outf, err := os.OpenFile(out, os.O_CREATE|os.O_WRONLY, 0600)
 	defer outf.Close()
 	if err != nil {
 		return err
@@ -42,4 +42,3 @@ func copy(from string, to io.Writer) error {
 	io.Copy(to, f)
 	return nil
 }
-

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"os"
 	"net"
+	"os"
 )
 
 func FatalCheck(err error) {
@@ -12,7 +12,7 @@ func FatalCheck(err error) {
 	}
 }
 
-func FilterIPV4(ips []net.IP) []string{
+func FilterIPV4(ips []net.IP) []string {
 	var ret = make([]string, 0)
 	for _, ip := range ips {
 		if ip.To4() != nil {

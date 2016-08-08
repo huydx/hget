@@ -1,20 +1,19 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
-	"net/http"
-	"os"
-	"strconv"
-	"sync"
-	"path/filepath"
+	"github.com/fatih/color"
 	pb "gopkg.in/cheggaaa/pb.v1"
 	"io"
-	"github.com/fatih/color"
 	"net"
+	"net/http"
 	stdurl "net/url"
-	"errors"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
-	"crypto/tls"
+	"sync"
 )
 
 var (
@@ -30,11 +29,11 @@ var (
 )
 
 type HttpDownloader struct {
-	url string
-	file string
-	par int64
-	len int64
-	ips []string
+	url     string
+	file    string
+	par     int64
+	len     int64
+	ips     []string
 	skipTls bool
 }
 
@@ -55,13 +54,16 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 	FatalCheck(err)
 
 	if resp.Header.Get(acceptRangeHeader) == "" {
-		FatalCheck(errors.New("Target url is not supported"))
+		Warnf("Target url is not supported range download\n")
+		//fallback to par = 1
+		par = 1
 	}
 
 	//get download range
 	clen := resp.Header.Get(contentLengthHeader)
 	if clen == "" {
-		FatalCheck(errors.New("Target url not contain Content-Length header"))
+		Warnf("Target url not contain Content-Length header\n")
+		clen = "1" //set 1 because of progress bar not accept 0 length
 	}
 
 	len, err := strconv.ParseInt(clen, 10, 64)
@@ -69,11 +71,12 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 
 	sizeInMb := float64(len) / (1000 * 1000)
 
-
-	if sizeInMb < 1000 {
+	if clen == "1" {
+		Printf("Dowload size: not specified\n")
+	} else if sizeInMb < 1000 {
 		Printf("Download target size: %.1f MB\n", sizeInMb)
 	} else {
-		Printf("Download target size: %.1f GB\n", sizeInMb / 1000)
+		Printf("Download target size: %.1f GB\n", sizeInMb/1000)
 	}
 
 	file := filepath.Base(url)
@@ -91,7 +94,7 @@ func (d *HttpDownloader) Do() ([]string, error) {
 
 	bars := make([]*pb.ProgressBar, 0)
 	for j := int64(0); j < d.par; j++ {
-		from := (d.len/d.par)*j
+		from := (d.len / d.par) * j
 		var to int64
 		if j < d.par-1 {
 			to = (d.len/d.par)*(j+1) - 1
@@ -99,7 +102,11 @@ func (d *HttpDownloader) Do() ([]string, error) {
 			to = d.len
 		}
 		len := to - from
-		bars = append(bars, pb.New64(len).Prefix(color.YellowString(fmt.Sprintf("%s-%d", d.file, j))))
+		newbar := pb.New64(len).SetUnits(pb.U_BYTES).Prefix(color.YellowString(fmt.Sprintf("%s-%d", d.file, j)))
+		if len <= 1 {
+			newbar.ShowPercent = false
+		}
+		bars = append(bars, newbar)
 	}
 
 	barpool, err := pb.StartPool(bars...)
@@ -116,7 +123,7 @@ func (d *HttpDownloader) Do() ([]string, error) {
 			var from int64
 			var to int64
 
-			from = (d.len/d.par)*loop
+			from = (d.len / d.par) * loop
 			if loop < d.par-1 {
 				to = (d.len/d.par)*(loop+1) - 1
 			}
@@ -128,21 +135,28 @@ func (d *HttpDownloader) Do() ([]string, error) {
 				ranges = fmt.Sprintf("bytes=%d-", from)
 			}
 
-
 			//send request
 			req, err := http.NewRequest("GET", d.url, nil)
 			if err != nil {
 				reterr = err
 				return
 			}
-			req.Header.Add("Range", ranges)
-			if err != nil {
-				reterr = err
-				return
+
+			if d.par > 1 { //support range download just in case parallel factor is over 1
+				req.Header.Add("Range", ranges)
+				if err != nil {
+					reterr = err
+					return
+				}
 			}
 
 			//write to file
 			resp, err := client.Do(req)
+			if err != nil {
+				Errorf("%v\n", err)
+				return
+			}
+
 			defer resp.Body.Close()
 
 			if err != nil {
@@ -152,7 +166,7 @@ func (d *HttpDownloader) Do() ([]string, error) {
 
 			fname := filepath.Base(d.url)
 			fname = fmt.Sprintf("/tmp/%s-part%d", fname, loop)
-			f, err := os.OpenFile(fname, os.O_CREATE | os.O_WRONLY, 0600)
+			f, err := os.OpenFile(fname, os.O_CREATE|os.O_WRONLY, 0600)
 
 			defer f.Close()
 			if err != nil {

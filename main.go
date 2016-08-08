@@ -2,15 +2,15 @@ package main
 
 import (
 	"flag"
-	"os"
-	"runtime"
-	"path/filepath"
 	"github.com/fatih/color"
+	"os"
+	"path/filepath"
+	"runtime"
 )
 
 var (
-	conn   = flag.Int("n", runtime.NumCPU(), "connection")
-	skiptls   = flag.Bool("skip-tls", true, "skip verify certificate for https")
+	conn    = flag.Int("n", runtime.NumCPU(), "connection")
+	skiptls = flag.Bool("skip-tls", true, "skip verify certificate for https")
 )
 
 func main() {
