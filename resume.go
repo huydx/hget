@@ -1,10 +1,10 @@
 package main
 
 import (
-	"io/ioutil"
-	"path/filepath"
-	"os"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 )
 

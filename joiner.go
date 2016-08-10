@@ -24,7 +24,6 @@ func JoinFile(files []string, out string) error {
 		if err = copy(f, outf); err != nil {
 			return err
 		}
-		os.Remove(f)
 		bar.Increment()
 	}
 	bar.Finish()

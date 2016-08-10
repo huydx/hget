@@ -21,3 +21,17 @@ func FilterIPV4(ips []net.IP) []string {
 	}
 	return ret
 }
+
+func MkdirIfNotExist(folder string) error {
+	if _, err := os.Stat(folder); err != nil {
+		if err = os.MkdirAll(folder, 0700); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func ExistDir(folder string) bool {
+	_, err := os.Stat(folder)
+	return err == nil
+}

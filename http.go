@@ -29,12 +29,13 @@ var (
 )
 
 type HttpDownloader struct {
-	url       string
-	file      string
-	par       int64
-	len       int64
-	ips       []string
-	skipTls   bool
+	url     string
+	file    string
+	par     int64
+	len     int64
+	ips     []string
+	skipTls bool
+	parts   []Part
 }
 
 func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
@@ -69,65 +70,77 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 	len, err := strconv.ParseInt(clen, 10, 64)
 	FatalCheck(err)
 
-	sizeInMb := float64(len) / (1000 * 1000)
+	sizeInMb := float64(len) / (1024 * 1024)
 
 	if clen == "1" {
 		Printf("Dowload size: not specified\n")
-	} else if sizeInMb < 1000 {
+	} else if sizeInMb < 1024 {
 		Printf("Download target size: %.1f MB\n", sizeInMb)
 	} else {
-		Printf("Download target size: %.1f GB\n", sizeInMb/1000)
+		Printf("Download target size: %.1f GB\n", sizeInMb/1024)
 	}
 
 	file := filepath.Base(url)
+	ret := new(HttpDownloader)
+	ret.url = url
+	ret.file = file
+	ret.par = int64(par)
+	ret.len = len
+	ret.ips = ipstr
+	ret.skipTls = *skiptls
+	ret.parts = partCalculate(int64(par), len, url)
 
-	return &HttpDownloader{url, file, int64(par), len, ipstr, skipTls}
+	return ret
+}
+
+func partCalculate(par int64, len int64, url string) []Part {
+	ret := make([]Part, 0)
+	for j := int64(0); j < par; j++ {
+		from := (len / par) * j
+		var to int64
+		if j < par-1 {
+			to = (len/par)*(j+1) - 1
+		} else {
+			to = len
+		}
+
+		file := filepath.Base(url)
+		folder := FolderOf(url)
+		if err := MkdirIfNotExist(folder); err != nil {
+			Errorf("%v", err)
+			os.Exit(1)
+		}
+
+		fname := fmt.Sprintf("%s.part%d", file, j)
+		path := filepath.Join(folder, fname) // ~/.hget/download-file-name/part-name
+		ret = append(ret, Part{Url: url, Path: path, RangeFrom: from, RangeTo: to})
+	}
+	return ret
 }
 
 func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan chan error, interruptChan chan bool, stateSaveChan chan Part) {
 	var ws sync.WaitGroup
 
 	bars := make([]*pb.ProgressBar, 0)
-	for j := int64(0); j < d.par; j++ {
-		from := (d.len / d.par) * j
-		var to int64
-		if j < d.par-1 {
-			to = (d.len/d.par)*(j+1) - 1
-		} else {
-			to = d.len
-		}
-		len := to - from
-		newbar := pb.New64(len).SetUnits(pb.U_BYTES).Prefix(color.YellowString(fmt.Sprintf("%s-%d", d.file, j)))
-		if len <= 1 {
-			newbar.ShowPercent = false
-		}
+	for i, part := range d.parts {
+		newbar := pb.New64(part.RangeTo - part.RangeFrom).SetUnits(pb.U_BYTES).Prefix(color.YellowString(fmt.Sprintf("%s-%d", d.file, i)))
 		bars = append(bars, newbar)
 	}
 
 	barpool, err := pb.StartPool(bars...)
 	FatalCheck(err)
 
-	var i int64
-	for i = 0; i < d.par; i++ {
+	for i, p := range d.parts {
 		ws.Add(1)
-		go func(d *HttpDownloader, loop int64) {
+		go func(d *HttpDownloader, loop int64, part Part) {
 			defer ws.Done()
 			var bar = bars[loop]
 
-			//range calculate
-			var from int64
-			var to int64
-
-			from = (d.len / d.par) * loop
-			if loop < d.par-1 {
-				to = (d.len/d.par)*(loop+1) - 1
-			}
-
 			var ranges string
-			if to != 0 {
-				ranges = fmt.Sprintf("bytes=%d-%d", from, to)
+			if part.RangeTo != d.len {
+				ranges = fmt.Sprintf("bytes=%d-%d", part.RangeFrom, part.RangeTo)
 			} else {
-				ranges = fmt.Sprintf("bytes=%d-", from)
+				ranges = fmt.Sprintf("bytes=%d-", part.RangeFrom) //get all
 			}
 
 			//send request
@@ -152,14 +165,11 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 				return
 			}
 			defer resp.Body.Close()
-
-
-			fname := filepath.Base(d.url)
-			fname = fmt.Sprintf("/tmp/%s-part%d", fname, loop)
-			f, err := os.OpenFile(fname, os.O_CREATE|os.O_WRONLY, 0600)
+			f, err := os.OpenFile(part.Path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0600)
 
 			defer f.Close()
 			if err != nil {
+				Errorf("%v\n", err)
 				errorChan <- err
 				return
 			}
@@ -170,8 +180,8 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 			current := int64(0)
 			for {
 				select {
-				case <- interruptChan:
-					stateSaveChan <- Part{Url: d.url, Path: fname, RangeFrom: current+from, RangeTo: to}
+				case <-interruptChan:
+					stateSaveChan <- Part{Url: d.url, Path: part.Path, RangeFrom: current + part.RangeFrom, RangeTo: part.RangeTo}
 					return
 				default:
 					written, err := io.CopyN(writer, resp.Body, 100)
@@ -181,12 +191,12 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 							errorChan <- err
 						}
 						bar.Finish()
-						fileChan <- fname
+						fileChan <- part.Path
 						return
 					}
 				}
 			}
-		}(d, i)
+		}(d, int64(i), p)
 	}
 
 	ws.Wait()

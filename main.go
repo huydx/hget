@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
-	"os/signal"
 	"syscall"
 )
 
@@ -43,6 +43,12 @@ func main() {
 	//otherwise is hget <URL> command
 	url := command
 
+	if ExistDir(FolderOf(url)) {
+		Warnf("Downloading task already exist, remove first \n")
+		err := os.RemoveAll(FolderOf(url))
+		FatalCheck(err)
+	}
+
 	signal_chan := make(chan os.Signal, 1)
 	signal.Notify(signal_chan,
 		syscall.SIGHUP,
@@ -73,14 +79,14 @@ func main() {
 			for i := 0; i < *conn; i++ {
 				interruptChan <- true
 			}
-		case file := <- fileChan:
+		case file := <-fileChan:
 			files = append(files, file)
-		case err := <- errorChan:
+		case err := <-errorChan:
 			Errorf("%v", err)
 			panic(err) //maybe need better style
-		case part := <- stateChan:
+		case part := <-stateChan:
 			parts = append(parts, part)
-		case <- doneChan:
+		case <-doneChan:
 			if isInterrupted {
 				Printf("Interrupted, saving state ... \n")
 				s := &State{Url: url, Parts: parts}
@@ -90,9 +96,9 @@ func main() {
 				}
 			} else {
 				err = JoinFile(files, filepath.Base(url))
-				if err != nil {
-					panic(err)
-				}
+				FatalCheck(err)
+				err = os.RemoveAll(FolderOf(url))
+				FatalCheck(err)
 			}
 			return
 		}

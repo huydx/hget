@@ -20,18 +20,19 @@ type Part struct {
 	Path      string
 	RangeFrom int64
 	RangeTo   int64
-	Cursor    int64
+}
+
+func FolderOf(url string) string {
+	return filepath.Join(os.Getenv("HOME"), dataFolder, filepath.Base(url))
 }
 
 func (s *State) Save() error {
 	//make temp folder
 	//only working in unix with env HOME
-	folder := filepath.Join(os.Getenv("HOME"), dataFolder, filepath.Base(s.Url))
+	folder := FolderOf(s.Url)
 	Printf("Saving current download data in %s\n", folder)
-	if _, err := os.Stat(folder); err != nil {
-		if err = os.MkdirAll(folder, 0700); err != nil {
-			return err
-		}
+	if err := MkdirIfNotExist(folder); err != nil {
+		return err
 	}
 
 	//move current downloading file to data folder
