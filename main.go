@@ -36,18 +36,23 @@ func main() {
 			usage()
 			os.Exit(1)
 		}
-		Resume(os.Args[2])
-		return
-	}
-
-	//otherwise is hget <URL> command
-	url := command
-
-	if ExistDir(FolderOf(url)) {
-		Warnf("Downloading task already exist, remove first \n")
-		err := os.RemoveAll(FolderOf(url))
+		state, err := Resume(os.Args[2])
 		FatalCheck(err)
+		Execute(state.Url, state)
+		return
+	} else {
+		if ExistDir(FolderOf(command)) {
+			Warnf("Downloading task already exist, remove first \n")
+			err := os.RemoveAll(FolderOf(command))
+			FatalCheck(err)
+		}
+		Execute(command, nil)
 	}
+}
+
+func Execute(url string, state *State) {
+	//otherwise is hget <URL> command
+	var err error
 
 	signal_chan := make(chan os.Signal, 1)
 	signal.Notify(signal_chan,
@@ -68,7 +73,12 @@ func main() {
 	stateChan := make(chan Part, 1)
 	interruptChan := make(chan bool, *conn)
 
-	downloader := NewHttpDownloader(url, *conn, *skiptls)
+	var downloader *HttpDownloader
+	if state == nil {
+		downloader = NewHttpDownloader(url, *conn, *skiptls)
+	} else {
+		downloader = &HttpDownloader{url: state.Url, file: filepath.Base(state.Url), par: int64(len(state.Parts)), parts: state.Parts, resumable: true}
+	}
 	go downloader.Do(doneChan, fileChan, errorChan, interruptChan, stateChan)
 
 	for {
@@ -88,22 +98,27 @@ func main() {
 			parts = append(parts, part)
 		case <-doneChan:
 			if isInterrupted {
-				Printf("Interrupted, saving state ... \n")
-				s := &State{Url: url, Parts: parts}
-				err := s.Save()
-				if err != nil {
-					Errorf("%v\n", err)
+				if downloader.resumable {
+					Printf("Interrupted, saving state ... \n")
+					s := &State{Url: url, Parts: parts}
+					err := s.Save()
+					if err != nil {
+						Errorf("%v\n", err)
+					}
+					return
+				} else {
+					Warnf("Interrupted, but downloading url is not resumable, silently die")
+					return
 				}
 			} else {
 				err = JoinFile(files, filepath.Base(url))
 				FatalCheck(err)
 				err = os.RemoveAll(FolderOf(url))
 				FatalCheck(err)
+				return
 			}
-			return
 		}
 	}
-
 }
 
 func usage() {

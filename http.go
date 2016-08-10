@@ -29,16 +29,19 @@ var (
 )
 
 type HttpDownloader struct {
-	url     string
-	file    string
-	par     int64
-	len     int64
-	ips     []string
-	skipTls bool
-	parts   []Part
+	url       string
+	file      string
+	par       int64
+	len       int64
+	ips       []string
+	skipTls   bool
+	parts     []Part
+	resumable bool
 }
 
 func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
+	var resumable = true
+
 	parsed, err := stdurl.Parse(url)
 	FatalCheck(err)
 
@@ -65,6 +68,7 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 	if clen == "" {
 		Warnf("Target url not contain Content-Length header\n")
 		clen = "1" //set 1 because of progress bar not accept 0 length
+		resumable = false
 	}
 
 	len, err := strconv.ParseInt(clen, 10, 64)
@@ -89,6 +93,7 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 	ret.ips = ipstr
 	ret.skipTls = *skiptls
 	ret.parts = partCalculate(int64(par), len, url)
+	ret.resumable = resumable
 
 	return ret
 }

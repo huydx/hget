@@ -28,11 +28,6 @@ func TaskPrint() error {
 	return nil
 }
 
-func Resume(task string) error {
-	state, err := Read(task)
-	if err != nil {
-		return err
-	}
-	fmt.Println(state)
-	return nil
+func Resume(task string) (*State, error) {
+	return Read(task)
 }
