@@ -29,12 +29,13 @@ var (
 )
 
 type HttpDownloader struct {
-	url     string
-	file    string
-	par     int64
-	len     int64
-	ips     []string
-	skipTls bool
+	url       string
+	file      string
+	par       int64
+	len       int64
+	ips       []string
+	skipTls   bool
+	interrupt chan bool
 }
 
 func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
@@ -81,7 +82,8 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 
 	file := filepath.Base(url)
 
-	return &HttpDownloader{url, file, int64(par), len, ipstr, skipTls}
+	interrupt := make(chan bool, 1)
+	return &HttpDownloader{url, file, int64(par), len, ipstr, skipTls, interrupt}
 }
 
 //get url
@@ -175,13 +177,28 @@ func (d *HttpDownloader) Do() ([]string, error) {
 			}
 
 			writer := io.MultiWriter(f, bar)
-			io.Copy(writer, resp.Body)
 
-			bar.Finish()
-
-			lock.Lock()
-			ret = append(ret, fname)
-			lock.Unlock()
+			//make copy interruptable by copy 100 bytes each loop
+			current := int64(0)
+			for {
+				select {
+				case <-d.interrupt:
+					//process interrupt
+				default:
+					written, err := io.CopyN(writer, resp.Body, 100)
+					current += written
+					if err != nil {
+						if err != io.EOF {
+							reterr = err
+						}
+						bar.Finish()
+						lock.Lock()
+						ret = append(ret, fname)
+						lock.Unlock()
+						return
+					}
+				}
+			}
 		}(d, i)
 	}
 

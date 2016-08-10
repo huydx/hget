@@ -1,7 +1,7 @@
 COMMIT = $$(git describe --always)
 
 deps:
-	@echo "====> Install depedencies..."
+	@echo "====> Install dependencies..."
 	go get -d github.com/fatih/color
 	go get -d github.com/mattn/go-colorable
 	go get -d github.com/mattn/go-isatty

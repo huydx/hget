@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/fatih/color"
 	"os"
 	"path/filepath"
@@ -27,6 +28,7 @@ func main() {
 	downloader := NewHttpDownloader(url, *conn, *skiptls)
 	files, err := downloader.Do()
 	if err != nil {
+		fmt.Println(err)
 		panic(err)
 	}
 
