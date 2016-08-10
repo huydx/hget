@@ -35,7 +35,6 @@ type HttpDownloader struct {
 	len       int64
 	ips       []string
 	skipTls   bool
-	interrupt chan bool
 }
 
 func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
@@ -82,12 +81,10 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 
 	file := filepath.Base(url)
 
-	interrupt := make(chan bool, 1)
-	return &HttpDownloader{url, file, int64(par), len, ipstr, skipTls, interrupt}
+	return &HttpDownloader{url, file, int64(par), len, ipstr, skipTls}
 }
 
-func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan chan error) {
-	var reterr error
+func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan chan error, interruptChan chan bool, stateSaveChan chan Part) {
 	var ws sync.WaitGroup
 
 	bars := make([]*pb.ProgressBar, 0)
@@ -136,14 +133,14 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 			//send request
 			req, err := http.NewRequest("GET", d.url, nil)
 			if err != nil {
-				reterr = err
+				errorChan <- err
 				return
 			}
 
 			if d.par > 1 { //support range download just in case parallel factor is over 1
 				req.Header.Add("Range", ranges)
 				if err != nil {
-					reterr = err
+					errorChan <- err
 					return
 				}
 			}
@@ -151,16 +148,11 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 			//write to file
 			resp, err := client.Do(req)
 			if err != nil {
-				Errorf("%v\n", err)
+				errorChan <- err
 				return
 			}
-
 			defer resp.Body.Close()
 
-			if err != nil {
-				reterr = err
-				return
-			}
 
 			fname := filepath.Base(d.url)
 			fname = fmt.Sprintf("/tmp/%s-part%d", fname, loop)
@@ -168,7 +160,7 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 
 			defer f.Close()
 			if err != nil {
-				reterr = err
+				errorChan <- err
 				return
 			}
 
@@ -178,8 +170,9 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 			current := int64(0)
 			for {
 				select {
-				case <-d.interrupt:
-					//process interrupt
+				case <- interruptChan:
+					stateSaveChan <- Part{Url: d.url, Path: fname, RangeFrom: current+from, RangeTo: to}
+					return
 				default:
 					written, err := io.CopyN(writer, resp.Body, 100)
 					current += written

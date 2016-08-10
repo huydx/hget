@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-var dataFolder = "~/.hget/"
+var dataFolder = ".hget/"
 var stateFileName = "state.json"
 
 type State struct {
@@ -25,9 +25,11 @@ type Part struct {
 
 func (s *State) Save() error {
 	//make temp folder
-	folder := filepath.Join(dataFolder, filepath.Base(s.Url))
+	//only working in unix with env HOME
+	folder := filepath.Join(os.Getenv("HOME"), dataFolder, filepath.Base(s.Url))
+	Printf("Saving current download data in %s\n", folder)
 	if _, err := os.Stat(folder); err != nil {
-		if err = os.Mkdir(folder, 0600); err != nil {
+		if err = os.MkdirAll(folder, 0700); err != nil {
 			return err
 		}
 	}
@@ -45,6 +47,15 @@ func (s *State) Save() error {
 	return ioutil.WriteFile(filepath.Join(folder, stateFileName), j, 0644)
 }
 
-func (s *State) Resume() error {
-	return nil
+func Read(task string) (*State, error) {
+	file := filepath.Join(os.Getenv("HOME"), dataFolder, task, stateFileName)
+	Printf("Getting data from %s\n", file)
+	bytes, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+
+	s := new(State)
+	err = json.Unmarshal(bytes, s)
+	return s, err
 }
