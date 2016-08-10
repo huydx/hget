@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"os/signal"
+	"syscall"
 )
 
 var (
@@ -24,18 +26,42 @@ func main() {
 
 	url := os.Args[1]
 
+	signal_chan := make(chan os.Signal, 1)
+	signal.Notify(signal_chan,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+
 	//set up parallel
+
+	var files = make([]string, 0)
+
+	doneChan := make(chan bool, *conn)
+	fileChan := make(chan string, *conn)
+	errorChan := make(chan error, 1)
+
 	downloader := NewHttpDownloader(url, *conn, *skiptls)
-	files, err := downloader.Do()
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
+	go downloader.Do(doneChan, fileChan, errorChan)
+
+	for {
+		select {
+		case <-signal_chan:
+			//process signal later
+		case file := <- fileChan:
+			files = append(files, file)
+		case err := <- errorChan:
+			fmt.Println(err)
+			panic(err) //maybe need better style
+		case <- doneChan:
+			err := JoinFile(files, filepath.Base(url))
+			if err != nil {
+				panic(err)
+			}
+			return
+		}
 	}
 
-	err = JoinFile(files, filepath.Base(url))
-	if err != nil {
-		panic(err)
-	}
 }
 
 func usage() {

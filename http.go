@@ -86,13 +86,9 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 	return &HttpDownloader{url, file, int64(par), len, ipstr, skipTls, interrupt}
 }
 
-//get url
-//output to multiple files
-func (d *HttpDownloader) Do() ([]string, error) {
+func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan chan error) {
 	var reterr error
 	var ws sync.WaitGroup
-	var lock sync.RWMutex
-	var ret = make([]string, 0)
 
 	bars := make([]*pb.ProgressBar, 0)
 	for j := int64(0); j < d.par; j++ {
@@ -189,12 +185,10 @@ func (d *HttpDownloader) Do() ([]string, error) {
 					current += written
 					if err != nil {
 						if err != io.EOF {
-							reterr = err
+							errorChan <- err
 						}
 						bar.Finish()
-						lock.Lock()
-						ret = append(ret, fname)
-						lock.Unlock()
+						fileChan <- fname
 						return
 					}
 				}
@@ -203,7 +197,6 @@ func (d *HttpDownloader) Do() ([]string, error) {
 	}
 
 	ws.Wait()
+	doneChan <- true
 	barpool.Stop()
-
-	return ret, reterr
 }
