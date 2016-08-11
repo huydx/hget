@@ -91,7 +91,7 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 	ret.par = int64(par)
 	ret.len = len
 	ret.ips = ipstr
-	ret.skipTls = *skiptls
+	ret.skipTls = skipTls
 	ret.parts = partCalculate(int64(par), len, url)
 	ret.resumable = resumable
 

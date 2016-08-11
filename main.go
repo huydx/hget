@@ -9,36 +9,35 @@ import (
 	"syscall"
 )
 
-var (
-	conn    = flag.Int("n", runtime.NumCPU(), "connection")
-	skiptls = flag.Bool("skip-tls", true, "skip verify certificate for https")
-)
-
 func main() {
 	var err error
 
+	conn    := flag.Int("n", runtime.NumCPU(), "connection")
+	skiptls := flag.Bool("skip-tls", true, "skip verify certificate for https")
+
 	flag.Parse()
-	if len(os.Args) < 2 {
+	args := flag.Args()
+	if len(args) < 1 {
 		Errorln("url is required")
 		usage()
 		os.Exit(1)
 	}
 
-	command := os.Args[1]
+	command := args[0]
 	if command == "tasks" {
 		if err = TaskPrint(); err != nil {
 			Errorf("%v\n", err)
 		}
 		return
 	} else if command == "resume" {
-		if len(os.Args) < 3 {
+		if len(args) < 2 {
 			Errorln("downloading task name is required")
 			usage()
 			os.Exit(1)
 		}
-		state, err := Resume(os.Args[2])
+		state, err := Resume(args[1])
 		FatalCheck(err)
-		Execute(state.Url, state)
+		Execute(state.Url, state, *conn, *skiptls)
 		return
 	} else {
 		if ExistDir(FolderOf(command)) {
@@ -46,11 +45,11 @@ func main() {
 			err := os.RemoveAll(FolderOf(command))
 			FatalCheck(err)
 		}
-		Execute(command, nil)
+		Execute(command, nil, *conn, *skiptls)
 	}
 }
 
-func Execute(url string, state *State) {
+func Execute(url string, state *State, conn int, skiptls bool) {
 	//otherwise is hget <URL> command
 	var err error
 
@@ -67,15 +66,15 @@ func Execute(url string, state *State) {
 	var parts = make([]Part, 0)
 	var isInterrupted = false
 
-	doneChan := make(chan bool, *conn)
-	fileChan := make(chan string, *conn)
+	doneChan := make(chan bool, conn)
+	fileChan := make(chan string, conn)
 	errorChan := make(chan error, 1)
 	stateChan := make(chan Part, 1)
-	interruptChan := make(chan bool, *conn)
+	interruptChan := make(chan bool, conn)
 
 	var downloader *HttpDownloader
 	if state == nil {
-		downloader = NewHttpDownloader(url, *conn, *skiptls)
+		downloader = NewHttpDownloader(url, conn, skiptls)
 	} else {
 		downloader = &HttpDownloader{url: state.Url, file: filepath.Base(state.Url), par: int64(len(state.Parts)), parts: state.Parts, resumable: true}
 	}
@@ -86,7 +85,7 @@ func Execute(url string, state *State) {
 		case <-signal_chan:
 			//send par number of interrupt for each routine
 			isInterrupted = true
-			for i := 0; i < *conn; i++ {
+			for i := 0; i < conn; i++ {
 				interruptChan <- true
 			}
 		case file := <-fileChan:
