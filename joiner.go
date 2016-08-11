@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/cheggaaa/pb"
+	"gopkg.in/cheggaaa/pb.v1"
 	"github.com/fatih/color"
 	"io"
 	"os"

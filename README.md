@@ -5,6 +5,8 @@ Rocket fast download accelerator written in golang. Current program working in u
 
 **NOTE** : hget is currently on highly development, its usage, architecture and code may change anytime at the future. It would be great if you can contribute whatever features that you want to use, I will take a look when have time.
 
+**Build Status**: [![Build Status](https://travis-ci.org/huydx/hget.svg?branch=master)](https://travis-ci.org/huydx/hget)
+
 ## Install
 
 ```
