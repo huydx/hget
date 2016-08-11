@@ -58,7 +58,7 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 	FatalCheck(err)
 
 	if resp.Header.Get(acceptRangeHeader) == "" {
-		Warnf("Target url is not supported range download\n")
+		Printf("Target url is not supported range download, fallback to parallel 1\n")
 		//fallback to par = 1
 		par = 1
 	}
@@ -66,10 +66,13 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 	//get download range
 	clen := resp.Header.Get(contentLengthHeader)
 	if clen == "" {
-		Warnf("Target url not contain Content-Length header\n")
+		Printf("Target url not contain Content-Length header, fallback to parallel 1\n")
 		clen = "1" //set 1 because of progress bar not accept 0 length
+		par = 1
 		resumable = false
 	}
+
+	Printf("Start download with %d connections \n", par)
 
 	len, err := strconv.ParseInt(clen, 10, 64)
 	FatalCheck(err)
@@ -77,7 +80,7 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 	sizeInMb := float64(len) / (1024 * 1024)
 
 	if clen == "1" {
-		Printf("Dowload size: not specified\n")
+		Printf("Download size: not specified\n")
 	} else if sizeInMb < 1024 {
 		Printf("Download target size: %.1f MB\n", sizeInMb)
 	} else {
