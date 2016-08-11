@@ -11,8 +11,12 @@ import (
 func JoinFile(files []string, out string) error {
 	//sort with file name or we will join files with wrong order
 	sort.Strings(files)
-	Printf("Start joining \n")
-	bar := pb.StartNew(len(files)).Prefix(color.CyanString("Joining"))
+	var bar *pb.ProgressBar
+
+	if DisplayProgressBar() {
+		Printf("Start joining \n")
+		bar = pb.StartNew(len(files)).Prefix(color.CyanString("Joining"))
+	}
 
 	outf, err := os.OpenFile(out, os.O_CREATE|os.O_WRONLY, 0600)
 	defer outf.Close()
@@ -24,9 +28,14 @@ func JoinFile(files []string, out string) error {
 		if err = copy(f, outf); err != nil {
 			return err
 		}
-		bar.Increment()
+		if DisplayProgressBar() {
+			bar.Increment()
+		}
 	}
-	bar.Finish()
+
+	if DisplayProgressBar() {
+		bar.Finish()
+	}
 
 	return nil
 }

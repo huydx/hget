@@ -3,6 +3,7 @@ package main
 import (
 	"net"
 	"os"
+	"github.com/mattn/go-isatty"
 )
 
 func FatalCheck(err error) {
@@ -34,4 +35,8 @@ func MkdirIfNotExist(folder string) error {
 func ExistDir(folder string) bool {
 	_, err := os.Stat(folder)
 	return err == nil
+}
+
+func DisplayProgressBar() bool {
+	return isatty.IsTerminal(os.Stdout.Fd()) && displayProgress
 }

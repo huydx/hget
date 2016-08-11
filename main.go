@@ -9,6 +9,8 @@ import (
 	"syscall"
 )
 
+var displayProgress = true
+
 func main() {
 	var err error
 

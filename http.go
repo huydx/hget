@@ -128,21 +128,29 @@ func partCalculate(par int64, len int64, url string) []Part {
 
 func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan chan error, interruptChan chan bool, stateSaveChan chan Part) {
 	var ws sync.WaitGroup
+	var bars []*pb.ProgressBar
+	var barpool *pb.Pool
+	var err error
 
-	bars := make([]*pb.ProgressBar, 0)
-	for i, part := range d.parts {
-		newbar := pb.New64(part.RangeTo - part.RangeFrom).SetUnits(pb.U_BYTES).Prefix(color.YellowString(fmt.Sprintf("%s-%d", d.file, i)))
-		bars = append(bars, newbar)
+	if DisplayProgressBar() {
+		bars = make([]*pb.ProgressBar, 0)
+		for i, part := range d.parts {
+			newbar := pb.New64(part.RangeTo - part.RangeFrom).SetUnits(pb.U_BYTES).Prefix(color.YellowString(fmt.Sprintf("%s-%d", d.file, i)))
+			bars = append(bars, newbar)
+		}
+		barpool, err = pb.StartPool(bars...)
+		FatalCheck(err)
 	}
-
-	barpool, err := pb.StartPool(bars...)
-	FatalCheck(err)
 
 	for i, p := range d.parts {
 		ws.Add(1)
 		go func(d *HttpDownloader, loop int64, part Part) {
 			defer ws.Done()
-			var bar = bars[loop]
+			var bar *pb.ProgressBar
+
+			if DisplayProgressBar() {
+				bar = bars[loop]
+			}
 
 			var ranges string
 			if part.RangeTo != d.len {
@@ -182,7 +190,12 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 				return
 			}
 
-			writer := io.MultiWriter(f, bar)
+			var writer io.Writer
+			if DisplayProgressBar() {
+				writer = io.MultiWriter(f, bar)
+			} else {
+				writer = io.MultiWriter(f)
+			}
 
 			//make copy interruptable by copy 100 bytes each loop
 			current := int64(0)
