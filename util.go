@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"errors"
 	"strings"
+	"net/url"
 )
 
 func FatalCheck(err error) {
@@ -62,4 +63,16 @@ func FolderOf(url string) string {
 	} else {
 		return fullQualifyPath
 	}
+}
+
+func TaskFromUrl(url string) string {
+	//task is just download file name
+	//so we get download file name on url
+	filename := filepath.Base(url)
+	return filename
+}
+
+func IsUrl(s string) bool {
+	_, err := url.Parse(s)
+	return err == nil
 }

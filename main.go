@@ -37,7 +37,15 @@ func main() {
 			usage()
 			os.Exit(1)
 		}
-		state, err := Resume(args[1])
+
+		var task string
+		if IsUrl(args[1]) {
+			task = TaskFromUrl(args[1])
+		} else {
+			task = args[1]
+		}
+
+		state, err := Resume(task)
 		FatalCheck(err)
 		Execute(state.Url, state, *conn, *skiptls)
 		return
