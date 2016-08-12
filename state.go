@@ -22,10 +22,6 @@ type Part struct {
 	RangeTo   int64
 }
 
-func FolderOf(url string) string {
-	return filepath.Join(os.Getenv("HOME"), dataFolder, filepath.Base(url))
-}
-
 func (s *State) Save() error {
 	//make temp folder
 	//only working in unix with env HOME
