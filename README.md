@@ -22,7 +22,7 @@ Binary file will be built at ./bin/hget, you can copy to /usr/bin or /usr/local/
 ```
 hget [Url] [-n parallel] [-skip-tls false] //to download url, with n connections, and not skip tls certificate
 hget tasks //get interrupted tasks
-hget [TaskName] //to resume task
+hget resume [TaskName | URL] //to resume task
 ```
 
 To interrupt any on-downloading process, just ctrl-c or ctrl-d at the middle of the download, hget will safely save your data and you will be able to resume later
