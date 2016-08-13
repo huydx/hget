@@ -25,3 +25,10 @@ func TestPartCalculate(t *testing.T) {
 		t.Fatalf("part range was wrong")
 	}
 }
+
+func TestNewHttpDownloader(t *testing.T) {
+	displayProgress = false
+
+	NewHttpDownloader("http://www.golangtc.com:80/static/go/1.7rc6/go1.7rc6.darwin-amd64.pkg", 1, true)
+	NewHttpDownloader("http://www.golangtc.com/static/go/1.7rc6/go1.7rc6.darwin-amd64.pkg", 1, true)
+}

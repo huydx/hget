@@ -43,9 +43,14 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 	var resumable = true
 
 	parsed, err := stdurl.Parse(url)
+	var host = parsed.Host
+	var portIndex = strings.Index(host, ":")
+	if portIndex >= 0 {
+		host = host[0:portIndex]
+	}
 	FatalCheck(err)
 
-	ips, err := net.LookupIP(parsed.Host)
+	ips, err := net.LookupIP(host)
 	FatalCheck(err)
 
 	ipstr := FilterIPV4(ips)
