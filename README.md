@@ -10,12 +10,10 @@ Rocket fast download accelerator written in golang. Current program working in u
 ## Install
 
 ```
-$ go get -d github.com/huydx/hget
-$ cd $GOPATH/src/github.com/huydx/hget
-$ make clean install
+$ go get github.com/huydx/hget
 ```
 
-Binary file will be built at ./bin/hget, you can copy to /usr/bin or /usr/local/bin and even `alias wget hget` to replace wget totally :P
+You can even `alias wget hget` to replace wget totally :P
 
 ## Usage
 
@@ -32,5 +30,3 @@ To interrupt any on-downloading process, just ctrl-c or ctrl-d at the middle of 
 
 ### Resume
 ![](https://i.gyazo.com/caa69808f6377421cb2976f323768dc4.gif)
-
-
