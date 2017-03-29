@@ -102,7 +102,8 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 }
 
 func partCalculate(par int64, len int64, url string) []Part {
-	ret := make([]Part, 0)
+	// Pre-allocate, perf tunning
+	ret := make([]Part, par)
 	for j := int64(0); j < par; j++ {
 		from := (len / par) * j
 		var to int64
@@ -121,7 +122,7 @@ func partCalculate(par int64, len int64, url string) []Part {
 
 		fname := fmt.Sprintf("%s.part%d", file, j)
 		path := filepath.Join(folder, fname) // ~/.hget/download-file-name/part-name
-		ret = append(ret, Part{Url: url, Path: path, RangeFrom: from, RangeTo: to})
+		ret[j] = Part{Url: url, Path: path, RangeFrom: from, RangeTo: to}
 	}
 	return ret
 }
@@ -197,26 +198,32 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 				writer = io.MultiWriter(f)
 			}
 
-			//make copy interruptable by copy 100 bytes each loop
 			current := int64(0)
-			for {
-				select {
-				case <-interruptChan:
-					stateSaveChan <- Part{Url: d.url, Path: part.Path, RangeFrom: current + part.RangeFrom, RangeTo: part.RangeTo}
-					return
-				default:
-					written, err := io.CopyN(writer, resp.Body, 100)
-					current += written
-					if err != nil {
-						if err != io.EOF {
-							errorChan <- err
-						}
-						bar.Finish()
-						fileChan <- part.Path
-						return
-					}
+			finishDownloadChan := make(chan bool)
+
+			go func() {
+				written, _ := io.Copy(writer, resp.Body)
+				current += written
+				fileChan <- part.Path
+				finishDownloadChan <- true
+			}()
+
+			select {
+			case <-interruptChan:
+				// interrupt download by forcefully close the input stream
+				resp.Body.Close()
+				<-finishDownloadChan
+				stateSaveChan <- Part{
+					Url:       d.url,
+					Path:      part.Path,
+					RangeFrom: current + part.RangeFrom,
+					RangeTo:   part.RangeTo,
 				}
+			case <-finishDownloadChan:
 			}
+
+			bar.Update()
+			bar.Finish()
 		}(d, int64(i), p)
 	}
 
