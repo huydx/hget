@@ -120,7 +120,8 @@ func partCalculate(par int64, len int64, url string) []Part {
 			os.Exit(1)
 		}
 
-		fname := fmt.Sprintf("%s.part%d", file, j)
+		// Padding 0 before path name as filename will be sorted as string
+		fname := fmt.Sprintf("%s.part%06d", file, j)
 		path := filepath.Join(folder, fname) // ~/.hget/download-file-name/part-name
 		ret[j] = Part{Url: url, Path: path, RangeFrom: from, RangeTo: to}
 	}

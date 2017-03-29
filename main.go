@@ -14,11 +14,12 @@ var displayProgress = true
 func main() {
 	var err error
 
-	conn    := flag.Int("n", runtime.NumCPU(), "connection")
+	conn := flag.Int("n", runtime.NumCPU(), "connection")
 	skiptls := flag.Bool("skip-tls", true, "skip verify certificate for https")
 
 	flag.Parse()
 	args := flag.Args()
+
 	if len(args) < 1 {
 		Errorln("url is required")
 		usage()
@@ -132,7 +133,7 @@ func Execute(url string, state *State, conn int, skiptls bool) {
 
 func usage() {
 	Printf(`Usage:
-hget [URL] [-n connection] [-skip-tls true]
+hget [-n connection] [-skip-tls true] URL
 hget tasks
 hget resume [TaskName]
 `)
