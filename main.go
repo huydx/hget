@@ -62,7 +62,6 @@ func main() {
 
 func Execute(url string, state *State, conn int, skiptls bool) {
 	//otherwise is hget <URL> command
-	var err error
 
 	signal_chan := make(chan os.Signal, 1)
 	signal.Notify(signal_chan,
@@ -121,7 +120,7 @@ func Execute(url string, state *State, conn int, skiptls bool) {
 					return
 				}
 			} else {
-				err = JoinFile(files, filepath.Base(url))
+				err := JoinFile(files, filepath.Base(url))
 				FatalCheck(err)
 				err = os.RemoveAll(FolderOf(url))
 				FatalCheck(err)
