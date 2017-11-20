@@ -16,6 +16,7 @@ type State struct {
 }
 
 type Part struct {
+	Index     int64
 	Url       string
 	Path      string
 	RangeFrom int64

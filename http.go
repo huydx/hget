@@ -102,7 +102,8 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 }
 
 func partCalculate(par int64, len int64, url string) []Part {
-	ret := make([]Part, 0)
+	// Pre-allocate, perf tunning
+	ret := make([]Part, par)
 	for j := int64(0); j < par; j++ {
 		from := (len / par) * j
 		var to int64
@@ -119,10 +120,12 @@ func partCalculate(par int64, len int64, url string) []Part {
 			os.Exit(1)
 		}
 
-		fname := fmt.Sprintf("%s.part%d", file, j)
+		// Padding 0 before path name as filename will be sorted as string
+		fname := fmt.Sprintf("%s.part%06d", file, j)
 		path := filepath.Join(folder, fname) // ~/.hget/download-file-name/part-name
-		ret = append(ret, Part{Url: url, Path: path, RangeFrom: from, RangeTo: to})
+		ret[j] = Part{Index: j, Url: url, Path: path, RangeFrom: from, RangeTo: to}
 	}
+
 	return ret
 }
 
@@ -132,25 +135,31 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 	var barpool *pb.Pool
 	var err error
 
-	if DisplayProgressBar() {
-		bars = make([]*pb.ProgressBar, 0)
-		for i, part := range d.parts {
-			newbar := pb.New64(part.RangeTo - part.RangeFrom).SetUnits(pb.U_BYTES).Prefix(color.YellowString(fmt.Sprintf("%s-%d", d.file, i)))
-			bars = append(bars, newbar)
-		}
-		barpool, err = pb.StartPool(bars...)
-		FatalCheck(err)
-	}
+	for _, p := range d.parts {
 
-	for i, p := range d.parts {
-		ws.Add(1)
-		go func(d *HttpDownloader, loop int64, part Part) {
-			defer ws.Done()
-			var bar *pb.ProgressBar
-
-			if DisplayProgressBar() {
-				bar = bars[loop]
+		if p.RangeTo <= p.RangeFrom {
+			fileChan <- p.Path
+			stateSaveChan <- Part{
+				Index:     p.Index,
+				Url:       d.url,
+				Path:      p.Path,
+				RangeFrom: p.RangeFrom,
+				RangeTo:   p.RangeTo,
 			}
+
+			continue
+		}
+
+		var bar *pb.ProgressBar
+
+		if DisplayProgressBar() {
+			bar = pb.New64(p.RangeTo - p.RangeFrom).SetUnits(pb.U_BYTES).Prefix(color.YellowString(fmt.Sprintf("%s-%d", d.file, p.Index)))
+			bars = append(bars, bar)
+		}
+
+		ws.Add(1)
+		go func(d *HttpDownloader, bar *pb.ProgressBar, part Part) {
+			defer ws.Done()
 
 			var ranges string
 			if part.RangeTo != d.len {
@@ -197,28 +206,41 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 				writer = io.MultiWriter(f)
 			}
 
-			//make copy interruptable by copy 100 bytes each loop
 			current := int64(0)
-			for {
-				select {
-				case <-interruptChan:
-					stateSaveChan <- Part{Url: d.url, Path: part.Path, RangeFrom: current + part.RangeFrom, RangeTo: part.RangeTo}
-					return
-				default:
-					written, err := io.CopyN(writer, resp.Body, 100)
-					current += written
-					if err != nil {
-						if err != io.EOF {
-							errorChan <- err
-						}
-						bar.Finish()
-						fileChan <- part.Path
-						return
-					}
-				}
+			finishDownloadChan := make(chan bool)
+
+			go func() {
+				written, _ := io.Copy(writer, resp.Body)
+				current += written
+				fileChan <- part.Path
+				finishDownloadChan <- true
+			}()
+
+			select {
+			case <-interruptChan:
+				// interrupt download by forcefully close the input stream
+				resp.Body.Close()
+				<-finishDownloadChan
+			case <-finishDownloadChan:
 			}
-		}(d, int64(i), p)
+
+			stateSaveChan <- Part{
+				Index:     part.Index,
+				Url:       d.url,
+				Path:      part.Path,
+				RangeFrom: current + part.RangeFrom,
+				RangeTo:   part.RangeTo,
+			}
+
+			if DisplayProgressBar() {
+				bar.Update()
+				bar.Finish()
+			}
+		}(d, bar, p)
 	}
+
+	barpool, err = pb.StartPool(bars...)
+	FatalCheck(err)
 
 	ws.Wait()
 	doneChan <- true

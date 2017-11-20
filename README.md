@@ -20,7 +20,7 @@ Binary file will be built at ./bin/hget, you can copy to /usr/bin or /usr/local/
 ## Usage
 
 ```
-hget [Url] [-n parallel] [-skip-tls false] //to download url, with n connections, and not skip tls certificate
+hget [-n parallel] [-skip-tls false] Url //to download url, with n connections, and not skip tls certificate
 hget tasks //get interrupted tasks
 hget resume [TaskName | URL] //to resume task
 ```
