@@ -1,11 +1,10 @@
 package main
 
 import (
-	"testing"
 	"io/ioutil"
 	"os"
+	"testing"
 )
-
 
 func TestJoiner(t *testing.T) {
 	displayProgress = false
