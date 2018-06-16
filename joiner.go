@@ -1,8 +1,8 @@
 package main
 
 import (
-	"gopkg.in/cheggaaa/pb.v1"
 	"github.com/fatih/color"
+	"gopkg.in/cheggaaa/pb.v1"
 	"io"
 	"os"
 	"sort"

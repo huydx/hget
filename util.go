@@ -1,13 +1,13 @@
 package main
 
 import (
-	"net"
-	"os"
-	"github.com/mattn/go-isatty"
-	"path/filepath"
 	"errors"
-	"strings"
+	"github.com/mattn/go-isatty"
+	"net"
 	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 func FatalCheck(err error) {

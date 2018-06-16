@@ -14,7 +14,7 @@ var displayProgress = true
 func main() {
 	var err error
 
-	conn    := flag.Int("n", runtime.NumCPU(), "connection")
+	conn := flag.Int("n", runtime.NumCPU(), "connection")
 	skiptls := flag.Bool("skip-tls", true, "skip verify certificate for https")
 
 	flag.Parse()
