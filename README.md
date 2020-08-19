@@ -23,8 +23,8 @@ Binary file will be built at ./bin/hget, you can copy to /usr/bin or /usr/local/
 hget [Url] [-n parallel] [-skip-tls false] [-proxy proxy_server]://to download url, with n connections, and not skip tls certificate
 hget tasks //get interrupted tasks
 hget resume [TaskName | URL] //to resume task
-hget -proxy "127.0.0.1:12345" https://releases.ubuntu.com/20.04.1/ubuntu-20.04.1-desktop-amd64.iso # to download using socks5 proxy
-hget -proxy "http://sample-proxy.com:8080" https://releases.ubuntu.com/20.04.1/ubuntu-20.04.1-desktop-amd64.iso # to download using http proxy
+hget -proxy "127.0.0.1:12345" link # to download using socks5 proxy
+hget -proxy "http://sample-proxy.com:8080" link # to download using http proxy
 ```
 
 To interrupt any on-downloading process, just ctrl-c or ctrl-d at the middle of the download, hget will safely save your data and you will be able to resume later
