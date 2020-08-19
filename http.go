@@ -45,20 +45,7 @@ type HttpDownloader struct {
 func NewHttpDownloader(url string, par int, skipTls bool, socks5_proxy string) *HttpDownloader {
 	var resumable = true
 
-	// setup a http client
-	httpTransport := &http.Transport{}
-	httpClient := &http.Client{Transport: httpTransport}
-
-	// set our socks5 as the dialer
-	if len(socks5_proxy) > 0 {
-		// create a socks5 dialer
-		dialer, err := proxy.SOCKS5("tcp", socks5_proxy, nil, proxy.Direct)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "can't connect to the proxy:", err)
-			os.Exit(1)
-		}
-		httpTransport.Dial = dialer.Dial
-	}
+	client := ProxyAwareHttpClient(socks5_proxy)
 
 	parsed, err := stdurl.Parse(url)
 	FatalCheck(err)
@@ -72,7 +59,7 @@ func NewHttpDownloader(url string, par int, skipTls bool, socks5_proxy string) *
 	req, err := http.NewRequest("GET", url, nil)
 	FatalCheck(err)
 
-	resp, err := httpClient.Do(req)
+	resp, err := client.Do(req)
 	FatalCheck(err)
 
 	if resp.Header.Get(acceptRangeHeader) == "" {
@@ -145,6 +132,24 @@ func partCalculate(par int64, len int64, url string) []Part {
 	return ret
 }
 
+func ProxyAwareHttpClient(socks5_proxy string) *http.Client {
+	// setup a http client
+	httpTransport := &http.Transport{}
+	httpClient := &http.Client{Transport: httpTransport}
+
+	// set our socks5 as the dialer
+	if len(socks5_proxy) > 0 {
+		// create a socks5 dialer
+		dialer, err := proxy.SOCKS5("tcp", d.proxy, nil, proxy.Direct)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "can't connect to the proxy:", err)
+			return httpClient
+		}
+		httpTransport.Dial = dialer.Dial
+	}
+	return httpClient
+}
+
 func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan chan error, interruptChan chan bool, stateSaveChan chan Part) {
 	var ws sync.WaitGroup
 	var bars []*pb.ProgressBar
@@ -164,20 +169,7 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 	for i, p := range d.parts {
 		ws.Add(1)
 		go func(d *HttpDownloader, loop int64, part Part) {
-			// setup a http client
-			httpTransport := &http.Transport{}
-			httpClient := &http.Client{Transport: httpTransport}
-
-			// set our socks5 as the dialer
-			if len(d.proxy) > 0 {
-				// create a socks5 dialer
-				dialer, err := proxy.SOCKS5("tcp", d.proxy, nil, proxy.Direct)
-				if err != nil {
-					fmt.Fprintln(os.Stderr, "can't connect to the proxy:", err)
-					os.Exit(1)
-				}
-				httpTransport.Dial = dialer.Dial
-			}
+			client := ProxyAwareHttpClient(d.proxy)
 			defer ws.Done()
 			var bar *pb.ProgressBar
 
@@ -208,7 +200,7 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 			}
 
 			//write to file
-			resp, err := httpClient.Do(req)
+			resp, err := client.Do(req)
 			if err != nil {
 				errorChan <- err
 				return
