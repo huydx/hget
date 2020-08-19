@@ -6,7 +6,7 @@ This project is my personal project to learn golang to build something useful.
 
 ## Install
 
-```
+```bash
 $ go get -d github.com/abzcoding/hget
 $ cd $GOPATH/src/github.com/abzcoding/hget
 $ make clean install
@@ -16,10 +16,10 @@ Binary file will be built at ./bin/hget, you can copy to /usr/bin or /usr/local/
 
 ## Usage
 
-```
-hget [Url] [-n parallel] [-skip-tls false] [-proxy proxy_server]://to download url, with n connections, and not skip tls certificate
-hget tasks //get interrupted tasks
-hget resume [TaskName | URL] //to resume task
+```bash
+hget [Url] [-n parallel] [-skip-tls false] [-proxy proxy_server] # to download url, with n connections, and not skip tls certificate
+hget tasks # get interrupted tasks
+hget resume [TaskName | URL] # to resume task
 hget -proxy "127.0.0.1:12345" link # to download using socks5 proxy
 hget -proxy "http://sample-proxy.com:8080" link # to download using http proxy
 ```
