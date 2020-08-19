@@ -4,14 +4,11 @@ This project is my personal project to learn golang to build something useful.
 ![](https://i.gyazo.com/641166ab79e196e35d1a0ef3f9befd80.png)
 
 
-
-**Build Status**: [![Build Status](https://travis-ci.org/huydx/hget.svg?branch=master)](https://travis-ci.org/huydx/hget)
-
 ## Install
 
 ```
-$ go get -d github.com/huydx/hget
-$ cd $GOPATH/src/github.com/huydx/hget
+$ go get -d github.com/abzcoding/hget
+$ cd $GOPATH/src/github.com/abzcoding/hget
 $ make clean install
 ```
 
