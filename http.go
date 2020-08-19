@@ -140,9 +140,9 @@ func ProxyAwareHttpClient(socks5_proxy string) *http.Client {
 	// set our socks5 as the dialer
 	if len(socks5_proxy) > 0 {
 		// create a socks5 dialer
-		dialer, err := proxy.SOCKS5("tcp", d.proxy, nil, proxy.Direct)
+		dialer, err := proxy.SOCKS5("tcp", socks5_proxy, nil, proxy.Direct)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "can't connect to the proxy:", err)
+			fmt.Fprintln(os.Stderr, "can't connect to the proxy: ", err)
 			return httpClient
 		}
 		httpTransport.Dial = dialer.Dial
