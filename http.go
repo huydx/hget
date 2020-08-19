@@ -3,8 +3,6 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/fatih/color"
-	pb "gopkg.in/cheggaaa/pb.v1"
 	"io"
 	"net"
 	"net/http"
@@ -14,6 +12,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/fatih/color"
+	"golang.org/x/net/proxy"
+	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
 var (
@@ -29,6 +31,7 @@ var (
 )
 
 type HttpDownloader struct {
+	proxy     string
 	url       string
 	file      string
 	par       int64
@@ -39,8 +42,23 @@ type HttpDownloader struct {
 	resumable bool
 }
 
-func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
+func NewHttpDownloader(url string, par int, skipTls bool, socks5_proxy string) *HttpDownloader {
 	var resumable = true
+
+	// setup a http client
+	httpTransport := &http.Transport{}
+	httpClient := &http.Client{Transport: httpTransport}
+
+	// set our socks5 as the dialer
+	if len(socks5_proxy) > 0 {
+		// create a socks5 dialer
+		dialer, err := proxy.SOCKS5("tcp", socks5_proxy, nil, proxy.Direct)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "can't connect to the proxy:", err)
+			os.Exit(1)
+		}
+		httpTransport.Dial = dialer.Dial
+	}
 
 	parsed, err := stdurl.Parse(url)
 	FatalCheck(err)
@@ -54,7 +72,7 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 	req, err := http.NewRequest("GET", url, nil)
 	FatalCheck(err)
 
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	FatalCheck(err)
 
 	if resp.Header.Get(acceptRangeHeader) == "" {
@@ -97,6 +115,7 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 	ret.skipTls = skipTls
 	ret.parts = partCalculate(int64(par), len, url)
 	ret.resumable = resumable
+	ret.proxy = socks5_proxy
 
 	return ret
 }
@@ -145,6 +164,20 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 	for i, p := range d.parts {
 		ws.Add(1)
 		go func(d *HttpDownloader, loop int64, part Part) {
+			// setup a http client
+			httpTransport := &http.Transport{}
+			httpClient := &http.Client{Transport: httpTransport}
+
+			// set our socks5 as the dialer
+			if len(d.proxy) > 0 {
+				// create a socks5 dialer
+				dialer, err := proxy.SOCKS5("tcp", d.proxy, nil, proxy.Direct)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "can't connect to the proxy:", err)
+					os.Exit(1)
+				}
+				httpTransport.Dial = dialer.Dial
+			}
 			defer ws.Done()
 			var bar *pb.ProgressBar
 
@@ -175,7 +208,7 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 			}
 
 			//write to file
-			resp, err := client.Do(req)
+			resp, err := httpClient.Do(req)
 			if err != nil {
 				errorChan <- err
 				return
