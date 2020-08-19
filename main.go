@@ -13,9 +13,11 @@ var displayProgress = true
 
 func main() {
 	var err error
+	var proxy string
 
-	conn    := flag.Int("n", runtime.NumCPU(), "connection")
+	conn := flag.Int("n", runtime.NumCPU(), "connection")
 	skiptls := flag.Bool("skip-tls", true, "skip verify certificate for https")
+	flag.StringVar(&proxy, "proxy", "", "socks5 proxy for downloading")
 
 	flag.Parse()
 	args := flag.Args()
@@ -47,7 +49,7 @@ func main() {
 
 		state, err := Resume(task)
 		FatalCheck(err)
-		Execute(state.Url, state, *conn, *skiptls)
+		Execute(state.Url, state, *conn, *skiptls, proxy)
 		return
 	} else {
 		if ExistDir(FolderOf(command)) {
@@ -55,11 +57,11 @@ func main() {
 			err := os.RemoveAll(FolderOf(command))
 			FatalCheck(err)
 		}
-		Execute(command, nil, *conn, *skiptls)
+		Execute(command, nil, *conn, *skiptls, proxy)
 	}
 }
 
-func Execute(url string, state *State, conn int, skiptls bool) {
+func Execute(url string, state *State, conn int, skiptls bool, proxy string) {
 	//otherwise is hget <URL> command
 	var err error
 
@@ -84,7 +86,7 @@ func Execute(url string, state *State, conn int, skiptls bool) {
 
 	var downloader *HttpDownloader
 	if state == nil {
-		downloader = NewHttpDownloader(url, conn, skiptls)
+		downloader = NewHttpDownloader(url, conn, skiptls, proxy)
 	} else {
 		downloader = &HttpDownloader{url: state.Url, file: filepath.Base(state.Url), par: int64(len(state.Parts)), parts: state.Parts, resumable: true}
 	}
@@ -132,7 +134,7 @@ func Execute(url string, state *State, conn int, skiptls bool) {
 
 func usage() {
 	Printf(`Usage:
-hget [URL] [-n connection] [-skip-tls true]
+hget [URL] [-n connection] [-skip-tls true] [-proxy socks5_proxy]
 hget tasks
 hget resume [TaskName]
 `)
