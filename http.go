@@ -3,8 +3,6 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/fatih/color"
-	pb "gopkg.in/cheggaaa/pb.v1"
 	"io"
 	"net"
 	"net/http"
@@ -14,6 +12,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/fatih/color"
+	"golang.org/x/net/proxy"
+	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
 var (
@@ -29,6 +31,7 @@ var (
 )
 
 type HttpDownloader struct {
+	proxy     string
 	url       string
 	file      string
 	par       int64
@@ -39,8 +42,10 @@ type HttpDownloader struct {
 	resumable bool
 }
 
-func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
+func NewHttpDownloader(url string, par int, skipTls bool, socks5_proxy string) *HttpDownloader {
 	var resumable = true
+
+	client := ProxyAwareHttpClient(socks5_proxy)
 
 	parsed, err := stdurl.Parse(url)
 	FatalCheck(err)
@@ -97,6 +102,7 @@ func NewHttpDownloader(url string, par int, skipTls bool) *HttpDownloader {
 	ret.skipTls = skipTls
 	ret.parts = partCalculate(int64(par), len, url)
 	ret.resumable = resumable
+	ret.proxy = socks5_proxy
 
 	return ret
 }
@@ -126,6 +132,36 @@ func partCalculate(par int64, len int64, url string) []Part {
 	return ret
 }
 
+func ProxyAwareHttpClient(socks5_proxy string) *http.Client {
+	// setup a http client
+	httpTransport := &http.Transport{}
+	httpClient := &http.Client{Transport: httpTransport}
+	var dialer proxy.Dialer
+	dialer = proxy.Direct
+	
+	if len(socks5_proxy) > 0 {
+		if strings.HasPrefix(socks5_proxy, "http") {
+			proxyUrl, err := stdurl.Parse(socks5_proxy)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "invalid proxy: ", err)
+			}
+			// create a http dialer
+			dialer, err = proxy.FromURL(proxyUrl, proxy.Direct)
+			if err == nil {
+				httpTransport.Dial = dialer.Dial
+			}
+		} else {
+			// create a socks5 dialer
+			dialer, err := proxy.SOCKS5("tcp", socks5_proxy, nil, proxy.Direct)
+			if err == nil {
+				httpTransport.Dial = dialer.Dial
+			}
+		}
+		
+	}
+	return httpClient
+}
+
 func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan chan error, interruptChan chan bool, stateSaveChan chan Part) {
 	var ws sync.WaitGroup
 	var bars []*pb.ProgressBar
@@ -145,6 +181,7 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 	for i, p := range d.parts {
 		ws.Add(1)
 		go func(d *HttpDownloader, loop int64, part Part) {
+			client := ProxyAwareHttpClient(d.proxy)
 			defer ws.Done()
 			var bar *pb.ProgressBar
 
