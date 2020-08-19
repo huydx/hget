@@ -17,7 +17,7 @@ func main() {
 
 	conn := flag.Int("n", runtime.NumCPU(), "connection")
 	skiptls := flag.Bool("skip-tls", true, "skip verify certificate for https")
-	flag.StringVar(&proxy, "proxy", "", "socks5 proxy for downloading")
+	flag.StringVar(&proxy, "proxy", "", "proxy for downloading, ex \n\t-proxy '127.0.0.1:12345' for socks5 proxy\n\t-proxy 'http://proxy.com:8080' for http proxy")
 
 	flag.Parse()
 	args := flag.Args()
@@ -134,7 +134,7 @@ func Execute(url string, state *State, conn int, skiptls bool, proxy string) {
 
 func usage() {
 	Printf(`Usage:
-hget [URL] [-n connection] [-skip-tls true] [-proxy socks5_proxy]
+hget [URL] [-n connection] [-skip-tls true] [-proxy proxy_address]
 hget tasks
 hget resume [TaskName]
 `)
