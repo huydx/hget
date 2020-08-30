@@ -25,6 +25,22 @@ hget -proxy "http://sample-proxy.com:8080" URL # to download using http proxy
 hget -file sample.txt # to download a list of files
 ```
 
+### Help
+```
+[I] ➜ hget -h
+Usage of hget:
+  -file string
+        filepath that contains links in each line
+  -n int
+        connection (default 16)
+  -proxy string
+        proxy for downloading, ex
+                -proxy '127.0.0.1:12345' for socks5 proxy
+                -proxy 'http://proxy.com:8080' for http proxy
+  -skip-tls
+        skip verify certificate for https (default true)
+```
+
 To interrupt any on-downloading process, just ctrl-c or ctrl-d at the middle of the download, hget will safely save your data and you will be able to resume later
 
 ### Download
