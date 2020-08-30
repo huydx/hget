@@ -8,6 +8,7 @@ deps:
 	go get -d github.com/fatih/color
 	go get -d gopkg.in/cheggaaa/pb.v1
 	go get -d github.com/mattn/go-isatty
+	go get -d github.com/imkira/go-task
 
 clean:
 	@echo "====> Remove installed binary"

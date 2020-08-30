@@ -1,30 +1,60 @@
 package main
 
 import (
+	"bufio"
 	"flag"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"runtime"
 	"syscall"
+
+	"github.com/imkira/go-task"
 )
 
 var displayProgress = true
 
 func main() {
 	var err error
-	var proxy string
+	var proxy, filepath string
 
 	conn := flag.Int("n", runtime.NumCPU(), "connection")
 	skiptls := flag.Bool("skip-tls", true, "skip verify certificate for https")
 	flag.StringVar(&proxy, "proxy", "", "proxy for downloading, ex \n\t-proxy '127.0.0.1:12345' for socks5 proxy\n\t-proxy 'http://proxy.com:8080' for http proxy")
+	flag.StringVar(&filepath, "file", "", "filepath that contains links in each line")
 
 	flag.Parse()
 	args := flag.Args()
 	if len(args) < 1 {
-		Errorln("url is required")
-		usage()
-		os.Exit(1)
+		if len(filepath) > 1 {
+			// Creating a SerialGroup.
+			g1 := task.NewSerialGroup()
+			file, err := os.Open(filepath)
+			if err != nil {
+				FatalCheck(err)
+			}
+
+			defer file.Close()
+
+			reader := bufio.NewReader(file)
+
+			for {
+				line, _, err := reader.ReadLine()
+
+				if err == io.EOF {
+					break
+				}
+
+				g1.AddChild(downloadTask(string(line), nil, *conn, *skiptls, proxy))
+			}
+			g1.Run(nil)
+			return
+		} else {
+			Errorln("url is required")
+			usage()
+			os.Exit(1)
+		}
 	}
 
 	command := args[0]
@@ -59,6 +89,13 @@ func main() {
 		}
 		Execute(command, nil, *conn, *skiptls, proxy)
 	}
+}
+
+func downloadTask(url string, state *State, conn int, skiptls bool, proxy string) task.Task {
+	run := func(t task.Task, ctx task.Context) {
+		Execute(url, state, conn, skiptls, proxy)
+	}
+	return task.NewTaskWithFunc(run)
 }
 
 func Execute(url string, state *State, conn int, skiptls bool, proxy string) {
@@ -133,7 +170,7 @@ func Execute(url string, state *State, conn int, skiptls bool, proxy string) {
 
 func usage() {
 	Printf(`Usage:
-hget [-n connection] [-skip-tls true] [-proxy proxy_address] URL
+hget [-n connection] [-skip-tls true] [-proxy proxy_address] [-file filename] URL
 hget tasks
 hget resume [TaskName]
 `)
