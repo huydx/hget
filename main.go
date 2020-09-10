@@ -17,12 +17,13 @@ var displayProgress = true
 
 func main() {
 	var err error
-	var proxy, filepath string
+	var proxy, filepath, bwLimit string
 
 	conn := flag.Int("n", runtime.NumCPU(), "connection")
 	skiptls := flag.Bool("skip-tls", true, "skip verify certificate for https")
 	flag.StringVar(&proxy, "proxy", "", "proxy for downloading, ex \n\t-proxy '127.0.0.1:12345' for socks5 proxy\n\t-proxy 'http://proxy.com:8080' for http proxy")
 	flag.StringVar(&filepath, "file", "", "filepath that contains links in each line")
+	flag.StringVar(&bwLimit, "rate", "", "bandwidth limit to use while downloading, ex\n\t -rate 10kB\n\t-rate 10MiB")
 
 	flag.Parse()
 	args := flag.Args()
@@ -46,7 +47,7 @@ func main() {
 					break
 				}
 
-				g1.AddChild(downloadTask(string(line), nil, *conn, *skiptls, proxy))
+				g1.AddChild(downloadTask(string(line), nil, *conn, *skiptls, proxy, bwLimit))
 			}
 			g1.Run(nil)
 			return
@@ -79,7 +80,7 @@ func main() {
 
 		state, err := Resume(task)
 		FatalCheck(err)
-		Execute(state.Url, state, *conn, *skiptls, proxy)
+		Execute(state.Url, state, *conn, *skiptls, proxy, bwLimit)
 		return
 	} else {
 		if ExistDir(FolderOf(command)) {
@@ -87,18 +88,18 @@ func main() {
 			err := os.RemoveAll(FolderOf(command))
 			FatalCheck(err)
 		}
-		Execute(command, nil, *conn, *skiptls, proxy)
+		Execute(command, nil, *conn, *skiptls, proxy, bwLimit)
 	}
 }
 
-func downloadTask(url string, state *State, conn int, skiptls bool, proxy string) task.Task {
+func downloadTask(url string, state *State, conn int, skiptls bool, proxy string, bwLimit string) task.Task {
 	run := func(t task.Task, ctx task.Context) {
-		Execute(url, state, conn, skiptls, proxy)
+		Execute(url, state, conn, skiptls, proxy, bwLimit)
 	}
 	return task.NewTaskWithFunc(run)
 }
 
-func Execute(url string, state *State, conn int, skiptls bool, proxy string) {
+func Execute(url string, state *State, conn int, skiptls bool, proxy string, bwLimit string) {
 	//otherwise is hget <URL> command
 
 	signal_chan := make(chan os.Signal, 1)
@@ -122,7 +123,7 @@ func Execute(url string, state *State, conn int, skiptls bool, proxy string) {
 
 	var downloader *HttpDownloader
 	if state == nil {
-		downloader = NewHttpDownloader(url, conn, skiptls, proxy)
+		downloader = NewHttpDownloader(url, conn, skiptls, proxy, bwLimit)
 	} else {
 		downloader = &HttpDownloader{url: state.Url, file: filepath.Base(state.Url), par: int64(len(state.Parts)), parts: state.Parts, resumable: true}
 	}

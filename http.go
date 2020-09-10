@@ -13,7 +13,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/alecthomas/units"
 	"github.com/fatih/color"
+	"github.com/fujiwara/shapeio"
 	"golang.org/x/net/proxy"
 	pb "gopkg.in/cheggaaa/pb.v1"
 )
@@ -30,8 +32,10 @@ var (
 	contentLengthHeader = "Content-Length"
 )
 
+// HttpDownloader holds the required configurations
 type HttpDownloader struct {
 	proxy     string
+	rate      int64
 	url       string
 	file      string
 	par       int64
@@ -42,11 +46,11 @@ type HttpDownloader struct {
 	resumable bool
 }
 
-func NewHttpDownloader(url string, par int, skipTls bool, socks5_proxy string) *HttpDownloader {
+func NewHttpDownloader(url string, par int, skipTls bool, proxy_server string, bwLimit string) *HttpDownloader {
 	var resumable = true
-	
-	client := ProxyAwareHttpClient(socks5_proxy)
-	
+
+	client := ProxyAwareHttpClient(proxy_server)
+
 	parsed, err := stdurl.Parse(url)
 	FatalCheck(err)
 
@@ -94,6 +98,12 @@ func NewHttpDownloader(url string, par int, skipTls bool, socks5_proxy string) *
 
 	file := filepath.Base(url)
 	ret := new(HttpDownloader)
+	ret.rate = 0
+	bandwidthLimit, err := units.ParseStrictBytes(bwLimit)
+	if err == nil {
+		ret.rate = bandwidthLimit
+		Printf("Download with bandwidth limit set to %s[%d]\n", bwLimit, ret.rate)
+	}
 	ret.url = url
 	ret.file = file
 	ret.par = int64(par)
@@ -102,7 +112,7 @@ func NewHttpDownloader(url string, par int, skipTls bool, socks5_proxy string) *
 	ret.skipTls = skipTls
 	ret.parts = partCalculate(int64(par), len, url)
 	ret.resumable = resumable
-	ret.proxy = socks5_proxy
+	ret.proxy = proxy_server
 
 	return ret
 }
@@ -135,16 +145,16 @@ func partCalculate(par int64, len int64, url string) []Part {
 	return ret
 }
 
-func ProxyAwareHttpClient(socks5_proxy string) *http.Client {
+func ProxyAwareHttpClient(proxy_server string) *http.Client {
 	// setup a http client
 	httpTransport := &http.Transport{}
 	httpClient := &http.Client{Transport: httpTransport}
 	var dialer proxy.Dialer
 	dialer = proxy.Direct
-	
-	if len(socks5_proxy) > 0 {
-		if strings.HasPrefix(socks5_proxy, "http") {
-			proxyUrl, err := stdurl.Parse(socks5_proxy)
+
+	if len(proxy_server) > 0 {
+		if strings.HasPrefix(proxy_server, "http") {
+			proxyUrl, err := stdurl.Parse(proxy_server)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "invalid proxy: ", err)
 			}
@@ -155,12 +165,12 @@ func ProxyAwareHttpClient(socks5_proxy string) *http.Client {
 			}
 		} else {
 			// create a socks5 dialer
-			dialer, err := proxy.SOCKS5("tcp", socks5_proxy, nil, proxy.Direct)
+			dialer, err := proxy.SOCKS5("tcp", proxy_server, nil, proxy.Direct)
 			if err == nil {
 				httpTransport.Dial = dialer.Dial
 			}
 		}
-		
+
 	}
 	return httpClient
 }
@@ -247,7 +257,14 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 			finishDownloadChan := make(chan bool)
 
 			go func() {
-				written, _ := io.Copy(writer, resp.Body)
+				var written int64
+				if d.rate != 0 {
+					reader := shapeio.NewReader(resp.Body)
+					reader.SetRateLimit(float64(d.rate))
+					written, _ = io.Copy(writer, reader)
+				} else {
+					written, _ = io.Copy(writer, resp.Body)
+				}
 				current += written
 				fileChan <- part.Path
 				finishDownloadChan <- true

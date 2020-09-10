@@ -17,12 +17,13 @@ Binary file will be built at ./bin/hget, you can copy to /usr/bin or /usr/local/
 ## Usage
 
 ```bash
-hget [-n parallel] [-skip-tls false] [-proxy proxy_server] [-file filename] [URL] # to download url, with n connections, and not skip tls certificate
+hget [-n parallel] [-skip-tls false] [-rate bwRate] [-proxy proxy_server] [-file filename] [URL] # to download url, with n connections, and not skip tls certificate
 hget tasks # get interrupted tasks
 hget resume [TaskName | URL] # to resume task
 hget -proxy "127.0.0.1:12345" URL # to download using socks5 proxy
 hget -proxy "http://sample-proxy.com:8080" URL # to download using http proxy
 hget -file sample.txt # to download a list of files
+hget -n 4 -rate 100KB URL # to download using 4 threads & limited to 100Kb per second
 ```
 
 ### Help
@@ -37,6 +38,10 @@ Usage of hget:
         proxy for downloading, ex
                 -proxy '127.0.0.1:12345' for socks5 proxy
                 -proxy 'http://proxy.com:8080' for http proxy
+  -rate string
+        bandwidth limit to use while downloading, ex
+                -rate 10kB
+                -rate 10MiB
   -skip-tls
         skip verify certificate for https (default true)
 ```
