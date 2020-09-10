@@ -2,11 +2,11 @@
 ![](https://i.gyazo.com/641166ab79e196e35d1a0ef3f9befd80.png)
 
 ### Features
-- Multithreading
-- Resume (interrupt & task mangement)
-- Proxy ( socks5 or http)
-- Download from a file list
+- Fast (multithreading & stuff)
+- Ability to interrupt/resume (task mangement)
+- Support for proxies( socks5 or http)
 - Bandwidth limiting
+- You can give it a file that contains list of urls to download
 
 ### Install
 
