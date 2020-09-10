@@ -1,10 +1,14 @@
 # hget
-This project is my personal project to learn golang to build something useful.
-
 ![](https://i.gyazo.com/641166ab79e196e35d1a0ef3f9befd80.png)
 
+### Features
+- Multithreading
+- Resume (interrupt & task mangement)
+- Proxy ( socks5 or http)
+- Download from a file list
+- Bandwidth limiting
 
-## Install
+### Install
 
 ```bash
 $ go get -d github.com/abzcoding/hget
@@ -14,7 +18,7 @@ $ make clean install
 
 Binary file will be built at ./bin/hget, you can copy to /usr/bin or /usr/local/bin and even `alias wget hget` to replace wget totally :P
 
-## Usage
+### Usage
 
 ```bash
 hget [-n parallel] [-skip-tls false] [-rate bwRate] [-proxy proxy_server] [-file filename] [URL] # to download url, with n connections, and not skip tls certificate
