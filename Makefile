@@ -16,6 +16,11 @@ clean:
 	@echo "====> Remove installed binary"
 	rm -f bin/hget
 
-install: deps
+build: deps
 	@echo "====> Build hget in ./bin "
 	go build -ldflags "-X main.GitCommit=\"$(COMMIT)\"" -o bin/hget
+
+install: build
+	@echo "====> Installing hget in /usr/local/bin/hget"
+	chmod +x ./bin/hget
+	sudo mv ./bin/hget /usr/local/bin/hget
