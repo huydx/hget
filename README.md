@@ -1,5 +1,8 @@
 [![Build Status](https://travis-ci.com/abzcoding/hget.svg?branch=master)](https://travis-ci.com/abzcoding/hget)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/abzcoding/hget/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/abzcoding/hget/?branch=master)
+[![Maintainability](https://api.codeclimate.com/v1/badges/936e2aacab5946478295/maintainability)](https://codeclimate.com/github/abzcoding/hget/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/936e2aacab5946478295/test_coverage)](https://codeclimate.com/github/abzcoding/hget/test_coverage)
+
 # hget
 ![](https://i.gyazo.com/641166ab79e196e35d1a0ef3f9befd80.png)
 
