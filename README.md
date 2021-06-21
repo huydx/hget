@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/abzcoding/hget.svg?branch=master)](https://travis-ci.com/abzcoding/hget)
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/abzcoding/hget/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/abzcoding/hget/?branch=master)
 # hget
 ![](https://i.gyazo.com/641166ab79e196e35d1a0ef3f9befd80.png)
 
