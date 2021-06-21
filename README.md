@@ -2,6 +2,8 @@
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/abzcoding/hget/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/abzcoding/hget/?branch=master)
 [![Maintainability](https://api.codeclimate.com/v1/badges/936e2aacab5946478295/maintainability)](https://codeclimate.com/github/abzcoding/hget/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/936e2aacab5946478295/test_coverage)](https://codeclimate.com/github/abzcoding/hget/test_coverage)
+[![codebeat 
+badge](https://codebeat.co/badges/ea357ae8-4d84-4599-bff7-cffc4f28fd67)](https://codebeat.co/projects/github-com-abzcoding-hget-master)
 
 # hget
 ![](https://i.gyazo.com/641166ab79e196e35d1a0ef3f9befd80.png)
