@@ -32,8 +32,8 @@ var (
 	contentLengthHeader = "Content-Length"
 )
 
-// HttpDownloader holds the required configurations
-type HttpDownloader struct {
+// HTTPDownloader holds the required configurations
+type HTTPDownloader struct {
 	proxy     string
 	rate      int64
 	url       string
@@ -41,15 +41,16 @@ type HttpDownloader struct {
 	par       int64
 	len       int64
 	ips       []string
-	skipTls   bool
+	skipTLS   bool
 	parts     []Part
 	resumable bool
 }
 
-func NewHttpDownloader(url string, par int, skipTls bool, proxy_server string, bwLimit string) *HttpDownloader {
+// NewHttpDownloader returns a ProxyAwareHttpClient with given configurations.
+func NewHttpDownloader(url string, par int, skipTLS bool, proxyServer string, bwLimit string) *HTTPDownloader {
 	var resumable = true
 
-	client := ProxyAwareHttpClient(proxy_server)
+	client := ProxyAwareHTTPClient(proxyServer)
 
 	parsed, err := stdurl.Parse(url)
 	FatalCheck(err)
@@ -97,7 +98,7 @@ func NewHttpDownloader(url string, par int, skipTls bool, proxy_server string, b
 	}
 
 	file := filepath.Base(url)
-	ret := new(HttpDownloader)
+	ret := new(HTTPDownloader)
 	ret.rate = 0
 	bandwidthLimit, err := units.ParseStrictBytes(bwLimit)
 	if err == nil {
@@ -109,10 +110,10 @@ func NewHttpDownloader(url string, par int, skipTls bool, proxy_server string, b
 	ret.par = int64(par)
 	ret.len = len
 	ret.ips = ipstr
-	ret.skipTls = skipTls
+	ret.skipTLS = skipTLS
 	ret.parts = partCalculate(int64(par), len, url)
 	ret.resumable = resumable
-	ret.proxy = proxy_server
+	ret.proxy = proxyServer
 
 	return ret
 }
@@ -145,27 +146,28 @@ func partCalculate(par int64, len int64, url string) []Part {
 	return ret
 }
 
-func ProxyAwareHttpClient(proxy_server string) *http.Client {
+// ProxyAwareHTTPClient will use http or socks5 proxy if given one.
+func ProxyAwareHTTPClient(proxyServer string) *http.Client {
 	// setup a http client
 	httpTransport := &http.Transport{}
 	httpClient := &http.Client{Transport: httpTransport}
 	var dialer proxy.Dialer
 	dialer = proxy.Direct
 
-	if len(proxy_server) > 0 {
-		if strings.HasPrefix(proxy_server, "http") {
-			proxyUrl, err := stdurl.Parse(proxy_server)
+	if len(proxyServer) > 0 {
+		if strings.HasPrefix(proxyServer, "http") {
+			proxyURL, err := stdurl.Parse(proxyServer)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "invalid proxy: ", err)
 			}
 			// create a http dialer
-			dialer, err = proxy.FromURL(proxyUrl, proxy.Direct)
+			dialer, err = proxy.FromURL(proxyURL, proxy.Direct)
 			if err == nil {
 				httpTransport.Dial = dialer.Dial
 			}
 		} else {
 			// create a socks5 dialer
-			dialer, err := proxy.SOCKS5("tcp", proxy_server, nil, proxy.Direct)
+			dialer, err := proxy.SOCKS5("tcp", proxyServer, nil, proxy.Direct)
 			if err == nil {
 				httpTransport.Dial = dialer.Dial
 			}
@@ -175,7 +177,8 @@ func ProxyAwareHttpClient(proxy_server string) *http.Client {
 	return httpClient
 }
 
-func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan chan error, interruptChan chan bool, stateSaveChan chan Part) {
+// Do is where the magic happens.
+func (d *HTTPDownloader) Do(doneChan chan bool, fileChan chan string, errorChan chan error, interruptChan chan bool, stateSaveChan chan Part) {
 	var ws sync.WaitGroup
 	var bars []*pb.ProgressBar
 	var barpool *pb.Pool
@@ -204,8 +207,8 @@ func (d *HttpDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 		}
 
 		ws.Add(1)
-		go func(d *HttpDownloader, bar *pb.ProgressBar, part Part) {
-			client := ProxyAwareHttpClient(d.proxy)
+		go func(d *HTTPDownloader, bar *pb.ProgressBar, part Part) {
+			client := ProxyAwareHTTPClient(d.proxy)
 			defer ws.Done()
 
 			var ranges string

@@ -121,11 +121,11 @@ func Execute(url string, state *State, conn int, skiptls bool, proxy string, bwL
 	stateChan := make(chan Part, 1)
 	interruptChan := make(chan bool, conn)
 
-	var downloader *HttpDownloader
+	var downloader *HTTPDownloader
 	if state == nil {
 		downloader = NewHttpDownloader(url, conn, skiptls, proxy, bwLimit)
 	} else {
-		downloader = &HttpDownloader{url: state.Url, file: filepath.Base(state.Url), par: int64(len(state.Parts)), parts: state.Parts, resumable: true}
+		downloader = &HTTPDownloader{url: state.Url, file: filepath.Base(state.Url), par: int64(len(state.Parts)), parts: state.Parts, resumable: true}
 	}
 	go downloader.Do(doneChan, fileChan, errorChan, interruptChan, stateChan)
 
