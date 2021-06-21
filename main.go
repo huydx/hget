@@ -149,22 +149,19 @@ func Execute(url string, state *State, conn int, skiptls bool, proxy string, bwL
 				if downloader.resumable {
 					Printf("Interrupted, saving state ... \n")
 					s := &State{Url: url, Parts: parts}
-					err := s.Save()
-					if err != nil {
+					if err := s.Save(); err != nil {
 						Errorf("%v\n", err)
 					}
-					return
 				} else {
 					Warnf("Interrupted, but downloading url is not resumable, silently die")
-					return
 				}
 			} else {
 				err := JoinFile(files, filepath.Base(url))
 				FatalCheck(err)
 				err = os.RemoveAll(FolderOf(url))
 				FatalCheck(err)
-				return
 			}
+			return
 		}
 	}
 }
