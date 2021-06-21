@@ -66,21 +66,21 @@ func FolderOf(url string) string {
 	if strings.Contains(relative, "..") {
 		FatalCheck(errors.New("you may be a victim of directory traversal path attack"))
 		return "" //return is redundant be cause in fatal check we have panic, but compiler does not able to check
-	} else {
-		return fullQualifyPath
 	}
+	return fullQualifyPath
+
 }
 
-// TaskFromUrl runs when you want to download a single url
-func TaskFromUrl(url string) string {
+// TaskFromURL runs when you want to download a single url
+func TaskFromURL(url string) string {
 	//task is just download file name
 	//so we get download file name on url
 	filename := filepath.Base(url)
 	return filename
 }
 
-// IsUrl checks if `s` is actually a parsable URL.
-func IsUrl(s string) bool {
+// IsURL checks if `s` is actually a parsable URL.
+func IsURL(s string) bool {
 	_, err := url.Parse(s)
 	return err == nil
 }

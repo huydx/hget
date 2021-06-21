@@ -28,34 +28,33 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 	if len(args) < 1 {
-		if len(filepath) > 1 {
-			// Creating a SerialGroup.
-			g1 := task.NewSerialGroup()
-			file, err := os.Open(filepath)
-			if err != nil {
-				FatalCheck(err)
-			}
-
-			defer file.Close()
-
-			reader := bufio.NewReader(file)
-
-			for {
-				line, _, err := reader.ReadLine()
-
-				if err == io.EOF {
-					break
-				}
-
-				g1.AddChild(downloadTask(string(line), nil, *conn, *skiptls, proxy, bwLimit))
-			}
-			g1.Run(nil)
-			return
-		} else {
+		if len(filepath) < 2 {
 			Errorln("url is required")
 			usage()
 			os.Exit(1)
 		}
+		// Creating a SerialGroup.
+		g1 := task.NewSerialGroup()
+		file, err := os.Open(filepath)
+		if err != nil {
+			FatalCheck(err)
+		}
+
+		defer file.Close()
+
+		reader := bufio.NewReader(file)
+
+		for {
+			line, _, err := reader.ReadLine()
+
+			if err == io.EOF {
+				break
+			}
+
+			g1.AddChild(downloadTask(string(line), nil, *conn, *skiptls, proxy, bwLimit))
+		}
+		g1.Run(nil)
+		return
 	}
 
 	command := args[0]
@@ -72,8 +71,8 @@ func main() {
 		}
 
 		var task string
-		if IsUrl(args[1]) {
-			task = TaskFromUrl(args[1])
+		if IsURL(args[1]) {
+			task = TaskFromURL(args[1])
 		} else {
 			task = args[1]
 		}
@@ -99,11 +98,12 @@ func downloadTask(url string, state *State, conn int, skiptls bool, proxy string
 	return task.NewTaskWithFunc(run)
 }
 
+// Execute configures the HTTPDownloader and uses it to download stuff.
 func Execute(url string, state *State, conn int, skiptls bool, proxy string, bwLimit string) {
 	//otherwise is hget <URL> command
 
-	signal_chan := make(chan os.Signal, 1)
-	signal.Notify(signal_chan,
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan,
 		syscall.SIGHUP,
 		syscall.SIGINT,
 		syscall.SIGTERM,
@@ -131,7 +131,7 @@ func Execute(url string, state *State, conn int, skiptls bool, proxy string, bwL
 
 	for {
 		select {
-		case <-signal_chan:
+		case <-signalChan:
 			//send par number of interrupt for each routine
 			isInterrupted = true
 			for i := 0; i < conn; i++ {

@@ -8,6 +8,7 @@ import (
 	"sort"
 )
 
+// JoinFile joins seperate chunks of file and forms the final downloaded artifact
 func JoinFile(files []string, out string) error {
 	//sort with file name or we will join files with wrong order
 	sort.Strings(files)
