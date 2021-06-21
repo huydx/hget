@@ -80,7 +80,7 @@ func main() {
 
 		state, err := Resume(task)
 		FatalCheck(err)
-		Execute(state.Url, state, *conn, *skiptls, proxy, bwLimit)
+		Execute(state.URL, state, *conn, *skiptls, proxy, bwLimit)
 		return
 	} else {
 		if ExistDir(FolderOf(command)) {
@@ -123,9 +123,9 @@ func Execute(url string, state *State, conn int, skiptls bool, proxy string, bwL
 
 	var downloader *HTTPDownloader
 	if state == nil {
-		downloader = NewHttpDownloader(url, conn, skiptls, proxy, bwLimit)
+		downloader = NewHTTPDownloader(url, conn, skiptls, proxy, bwLimit)
 	} else {
-		downloader = &HTTPDownloader{url: state.Url, file: filepath.Base(state.Url), par: int64(len(state.Parts)), parts: state.Parts, resumable: true}
+		downloader = &HTTPDownloader{url: state.URL, file: filepath.Base(state.URL), par: int64(len(state.Parts)), parts: state.Parts, resumable: true}
 	}
 	go downloader.Do(doneChan, fileChan, errorChan, interruptChan, stateChan)
 
@@ -148,7 +148,7 @@ func Execute(url string, state *State, conn int, skiptls bool, proxy string, bwL
 			if isInterrupted {
 				if downloader.resumable {
 					Printf("Interrupted, saving state ... \n")
-					s := &State{Url: url, Parts: parts}
+					s := &State{URL: url, Parts: parts}
 					if err := s.Save(); err != nil {
 						Errorf("%v\n", err)
 					}

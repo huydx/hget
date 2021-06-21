@@ -14,7 +14,7 @@ func TestPartCalculate(t *testing.T) {
 		t.Fatalf("parts length should be 10")
 	}
 
-	if parts[0].Url != "http://foo.bar/file" {
+	if parts[0].URL != "http://foo.bar/file" {
 		t.Fatalf("part url was wrong")
 	}
 

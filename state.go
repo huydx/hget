@@ -11,13 +11,13 @@ var dataFolder = ".hget/"
 var stateFileName = "state.json"
 
 type State struct {
-	Url   string
+	URL   string
 	Parts []Part
 }
 
 type Part struct {
 	Index     int64
-	Url       string
+	URL       string
 	Path      string
 	RangeFrom int64
 	RangeTo   int64
@@ -26,7 +26,7 @@ type Part struct {
 func (s *State) Save() error {
 	//make temp folder
 	//only working in unix with env HOME
-	folder := FolderOf(s.Url)
+	folder := FolderOf(s.URL)
 	Printf("Saving current download data in %s\n", folder)
 	if err := MkdirIfNotExist(folder); err != nil {
 		return err

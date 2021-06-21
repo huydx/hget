@@ -46,10 +46,9 @@ type HTTPDownloader struct {
 	resumable bool
 }
 
-// NewHttpDownloader returns a ProxyAwareHttpClient with given configurations.
-func NewHttpDownloader(url string, par int, skipTLS bool, proxyServer string, bwLimit string) *HTTPDownloader {
+// NewHTTPDownloader returns a ProxyAwareHttpClient with given configurations.
+func NewHTTPDownloader(url string, par int, skipTLS bool, proxyServer string, bwLimit string) *HTTPDownloader {
 	var resumable = true
-
 	client := ProxyAwareHTTPClient(proxyServer)
 
 	parsed, err := stdurl.Parse(url)
@@ -69,7 +68,6 @@ func NewHttpDownloader(url string, par int, skipTLS bool, proxyServer string, bw
 
 	if resp.Header.Get(acceptRangeHeader) == "" {
 		Printf("Target url is not supported range download, fallback to parallel 1\n")
-		//fallback to par = 1
 		par = 1
 	}
 
@@ -140,7 +138,7 @@ func partCalculate(par int64, len int64, url string) []Part {
 		// Padding 0 before path name as filename will be sorted as string
 		fname := fmt.Sprintf("%s.part%06d", file, j)
 		path := filepath.Join(folder, fname) // ~/.hget/download-file-name/part-name
-		ret[j] = Part{Index: j, Url: url, Path: path, RangeFrom: from, RangeTo: to}
+		ret[j] = Part{Index: j, URL: url, Path: path, RangeFrom: from, RangeTo: to}
 	}
 
 	return ret
@@ -190,7 +188,7 @@ func (d *HTTPDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 			fileChan <- p.Path
 			stateSaveChan <- Part{
 				Index:     p.Index,
-				Url:       d.url,
+				URL:       d.url,
 				Path:      p.Path,
 				RangeFrom: p.RangeFrom,
 				RangeTo:   p.RangeTo,
@@ -283,7 +281,7 @@ func (d *HTTPDownloader) Do(doneChan chan bool, fileChan chan string, errorChan 
 
 			stateSaveChan <- Part{
 				Index:     part.Index,
-				Url:       d.url,
+				URL:       d.url,
 				Path:      part.Path,
 				RangeFrom: current + part.RangeFrom,
 				RangeTo:   part.RangeTo,
