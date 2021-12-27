@@ -31,8 +31,8 @@ hget tasks # get interrupted tasks
 hget resume [TaskName | URL] # to resume task
 hget -proxy "127.0.0.1:12345" URL # to download using socks5 proxy
 hget -proxy "http://sample-proxy.com:8080" URL # to download using http proxy
-hget -file sample.txt # to download a list of files
-hget -n 4 -rate 100KB URL # to download using 4 threads & limited to 100Kb per second
+hget -file sample.txt # to download a list of urls
+hget -n 4 -rate 100KB URL # to download using 4 threads & limited to 100KB per second
 ```
 
 ### Help
