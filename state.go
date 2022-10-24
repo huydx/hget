@@ -10,22 +10,26 @@ import (
 var dataFolder = ".hget/"
 var stateFileName = "state.json"
 
+// State holds information about url Parts
 type State struct {
-	Url   string
+	URL   string
 	Parts []Part
 }
 
+// Part represents a chunk of downloaded file
 type Part struct {
-	Url       string
+	Index     int64
+	URL       string
 	Path      string
 	RangeFrom int64
 	RangeTo   int64
 }
 
+// Save stores downloaded file into disk
 func (s *State) Save() error {
 	//make temp folder
 	//only working in unix with env HOME
-	folder := FolderOf(s.Url)
+	folder := FolderOf(s.URL)
 	Printf("Saving current download data in %s\n", folder)
 	if err := MkdirIfNotExist(folder); err != nil {
 		return err
@@ -44,6 +48,7 @@ func (s *State) Save() error {
 	return ioutil.WriteFile(filepath.Join(folder, stateFileName), j, 0644)
 }
 
+// Read loads data about the state of downloaded files
 func Read(task string) (*State, error) {
 	file := filepath.Join(os.Getenv("HOME"), dataFolder, task, stateFileName)
 	Printf("Getting data from %s\n", file)

@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// TaskPrint read and prints data about current download jobs
 func TaskPrint() error {
 	downloading, err := ioutil.ReadDir(filepath.Join(os.Getenv("HOME"), dataFolder))
 	if err != nil {
@@ -28,6 +29,7 @@ func TaskPrint() error {
 	return nil
 }
 
+// Resume gets back to a previously stopped task
 func Resume(task string) (*State, error) {
 	return Read(task)
 }
